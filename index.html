@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#EAF0FA">
+<script>try{if((window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone||/[?&]splash=1/.test(location.search))document.documentElement.classList.add("show-splash");}catch(e){}</script>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="64x64" href="images/favicon.png">
+<link rel="apple-touch-icon" href="images/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="雪羽慢旅">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<title>雪羽慢旅｜跟著小山雀，收藏北海道的冬日風景</title>
+<meta name="description" content="北海道 2/4–2/14 冬日慢旅：支笏湖、札幌、洞爺湖、小樽，含每日行程、天氣、行李與家人共享。">
+<meta property="og:title" content="雪羽慢旅｜跟著小山雀，收藏北海道的冬日風景">
+<meta property="og:description" content="北海道 11 日冬旅行程與家人共享指南。">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=Caveat:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/ChenYuluoyan-Thin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css?v=hk7">
+<link rel="stylesheet" href="splash.css?v=hk7">
+</head>
+<body class="family-locked">
+
+<div id="familyGate" class="family-gate" aria-hidden="false">
+  <div class="family-gate-card">
+    <img class="family-gate-img" src="images/logo.webp" alt="雪羽慢旅" width="84" height="84">
+    <h2>北海道冬旅・家庭行程</h2>
+    <p>請使用在 Supabase Authentication 建立的家人帳號登入。登入後，各裝置會安全共用同一份行程資料。</p>
+    <input id="familyGateEmail" type="email" inputmode="email" autocomplete="username" placeholder="家人 Email">
+    <input id="familyGateInput" type="password" autocomplete="current-password" placeholder="Password">
+    <button id="familyGateButton" type="button">登入行程</button>
+    <button id="offlineGateButton" class="family-offline-button" type="button" hidden>離線查看已下載行程</button>
+    <div id="familyGateError" class="family-gate-error" role="alert"></div>
+  </div>
+</div>
+
+<aside id="desktopWorkbench" class="desktop-workbench" aria-label="桌機預覽與編輯工具">
+  <div class="workbench-title">桌機手機預覽</div>
+  <div class="workbench-sub">畫面與手機使用時保持相同寬度與操作邏輯。</div>
+  <div class="workbench-label">顯示模式</div>
+  <div class="workbench-segment">
+    <button type="button" data-ui-mode="edit" onclick="setUiMode('edit')">✎ 編輯</button>
+    <button type="button" data-ui-mode="travel" onclick="setUiMode('travel')">旅行</button>
+  </div>
+  <div class="workbench-label">預覽寬度</div>
+  <div class="workbench-segment preview-size-segment">
+    <button type="button" data-preview-width="390" onclick="setPreviewWidth(390)">390</button>
+    <button type="button" data-preview-width="430" onclick="setPreviewWidth(430)">430</button>
+  </div>
+  <label class="desktop-search-label" for="globalSearchDesktop">搜尋全部行程</label>
+  <div class="global-search-input-wrap">
+    <span>⌕</span><input id="globalSearchDesktop" type="search" placeholder="景點、餐廳、住宿…" oninput="runGlobalSearch(this.value)">
+  </div>
+  <div id="globalSearchResultsDesktop" class="global-search-results"></div>
+</aside>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="header" id="main-header">
+    <div class="header-top">
+      <div class="header-status">
+        <div class="net-status" id="netStatus"><span class="net-dot online"></span><span class="net-txt">線上</span></div>
+        <div class="cloud-sync-status" id="cloudSyncStatus">☁️ 同步中</div>
+      </div>
+      <div class="header-tools">
+        <button type="button" class="ht-btn ht-fav" id="favCorner" onclick="openMarksPanel('fav')" aria-label="收藏與預約">★<span class="ht-badge" id="favBadge" style="display:none"></span></button>
+        <button type="button" class="ht-pill" id="modeBtn" onclick="toggleUiMode()">旅行</button>
+        <button type="button" class="ht-pill" id="sizeBtn" onclick="toggleTextSize()">標準字</button>
+        <button type="button" class="ht-btn" onclick="openToolsSheet()" aria-label="工具與設定">⚙️</button>
+      </div>
+    </div>
+    <div class="header-title">
+      <div class="eyebrow">Hokkaido · A Little Bird’s Winter Journey</div>
+      <h1>雪羽慢旅<small>跟著小山雀，收藏北海道的冬日風景</small></h1>
+    </div>
+    <div class="header-scene">
+      <img class="header-art" src="images/header.webp" alt="" width="1500" height="500" decoding="async">
+    </div>
+    <div class="header-foot"><div class="dates">2027.2.4 出發 – 2.14 返台・11天10夜</div></div>
+    <div class="preview-note">單機預覽：尚未連接家人同步，資料只存在這台裝置</div>
+    <span id="spotCount" hidden>--</span>
+  </div>
+
+  <!-- ================= ITINERARY VIEW ================= -->
+  <div class="view active" id="view-itinerary">
+    <div class="mobile-global-search">
+      <div class="global-search-input-wrap"><span>⌕</span><input id="globalSearchMobile" type="search" placeholder="搜尋全部 11 天行程…" oninput="runGlobalSearch(this.value)"></div>
+      <div id="globalSearchResultsMobile" class="global-search-results"></div>
+    </div>
+    <div class="day-tools" id="dayTools" role="tablist" aria-label="當日工具"></div>
+    <div class="day-scroll" id="dayScroll"></div>
+    <div id="dayContent"></div>
+  </div>
+
+  <!-- ================= ROUTE MAP VIEW ================= -->
+  <div class="view" id="view-route">
+    <div class="map-wrap" style="margin-top:0; padding-bottom:24px;">
+      <h3 class="page-title"><img src="images/nav-route.webp" alt="" width="34" height="34"> 北海道 11 日移動路線</h3>
+      
+      <div id="hokkaidoRouteMap" class="svg-map-container" style="position:relative;">
+        <img id="handDrawnMapImg" src="images/map.webp" alt="北海道 2/4–2/14 行程總覽插畫：新千歲、支笏湖、札幌、洞爺湖、小樽" loading="lazy" class="route-main-image" onclick="openAttachModal('images/map.webp')">
+        <div id="mapFallback" style="display:none; padding:24px 16px; border:2px dashed #C9D6E9; border-radius:var(--r-md); background:#F7F9FD; text-align:center;">
+          <p style="font-size:13px; color:#2F3A4A; font-weight:700; line-height:1.6; margin-top:0;">⚠️ 找不到地圖圖片！<br><span style="font-size:11px; font-weight:400;">請點擊下方按鈕手動選擇：</span></p>
+          <input type="file" id="mapUploader" style="display:none;" accept="image/*" onchange="loadLocalMap(event)">
+          <button onclick="document.getElementById('mapUploader').click()" style="background:var(--blue); color:#fff; border:none; padding:10px 20px; border-radius:999px; font-size:12px; font-weight:700; cursor:pointer;">📁 手動載入圖片</button>
+        </div>
+      </div>
+      <div class="map-zoom-hint">點擊手繪地圖可全螢幕放大</div>
+      <a href="https://www.google.com/maps/dir/New+Chitose+Airport/Lake+Shikotsu/Sapporo/Lake+Toya/Otaru/Sapporo/New+Chitose+Airport" target="_blank" rel="noopener" class="btn btn-map" style="display:flex; margin-top:12px; text-decoration:none;">🗺️ 在 Google 地圖開啟主要路線</a>
+    </div>
+
+    <!-- Flights -->
+    <div class="section-card">
+      <h3>✈️ 飛航與主要交通</h3>
+      <div class="flight-box"><div class="ftitle">🛫 去程 TPE → CTS</div><div class="flight-row"><span>日期</span><span>2027.02.04（四）</span></div><div class="flight-row"><span>時間</span><span>08:35 → 13:35</span></div><div class="flight-row"><span>航班</span><span>中華航空 CI130</span></div></div>
+      <div class="flight-box"><div class="ftitle">🛬 回程 CTS → TPE</div><div class="flight-row"><span>日期</span><span>2027.02.14（日）</span></div><div class="flight-row"><span>時間</span><span>15:05 → 18:15</span></div><div class="flight-row"><span>航班</span><span>中華航空 CI131</span></div></div>
+      <div class="source-note">※ 航班時間以最終票券為準。</div>
+    </div>
+
+    <!-- Docs -->
+    <details class="section-card compact-section voucher-section">
+      <summary class="compact-section-summary"><div><h3>行程票券與住宿總匯</h3><div class="sub">住宿、航班與預約憑證</div></div><em>展開</em></summary>
+      <div class="compact-section-body"><div id="docsListWrap" class="voucher-list"></div></div>
+    </details>
+
+    <!-- Driving -->
+    <details class="section-card compact-section transport-section">
+      <summary class="compact-section-summary"><div><h3>交通提醒</h3><div class="sub">各日搭乘提醒、官方連結</div></div><em>展開</em></summary>
+      <div class="compact-section-body">
+      <div class="sub" style="margin-bottom:12px;">收到正式交通安排後會逐日補上；目前先列出主要移動段。</div>
+      <details class="transport-principles">
+        <summary class="transport-principles-head"><img class="tp-ic" src="images/nav-route.webp" alt="" width="34" height="34"><div><small>共通設定</small><h4>票券與冬季搭乘原則</h4></div><em>展開</em></summary>
+        <div class="transport-principles-body">
+        <ul><li>準備 Kitaca 或 Suica 等 IC 卡，JR、地下鐵、市電與多數巴士都能刷。</li><li>大雪時 JR 與巴士可能延誤或停駛，移動日早上先看運行情報。</li><li>機場往返札幌可搭 JR 快速 Airport；票券細節待正式行程確認。</li></ul>
+        </div>
+      </details>
+      <div id="transportQuickNav" class="transport-quick-nav" aria-label="交通日期快速索引"></div>
+      <div class="transport-grid">
+        <article class="transport-card"><div class="transport-day">D1</div><div><h4>新千歲機場 → 支笏湖</h4><p>CI130 13:35 抵達，機場逛逛後 16:30 出發，約 17:10 抵達水之謌。</p></div></article>
+        <article class="transport-card"><div class="transport-day">D3</div><div><h4>支笏湖 → 千歲站 → 札幌</h4><p>13:35 支笏湖出發，14:10 抵達千歲站，轉 JR 千歲線往札幌約 30–40 分鐘。</p></div></article>
+        <article class="transport-card"><div class="transport-day">D4</div><div><h4>札幌 → 洞爺湖</h4><p>交通方式待補；當晚 20:30 溫泉花火。</p></div></article>
+        <article class="transport-card"><div class="transport-day">D6</div><div><h4>洞爺湖 → 札幌</h4><p>交通方式待補；下午莫埃來沼公園。</p></div></article>
+        <article class="transport-card"><div class="transport-day">D7–D8</div><div><h4>札幌 → 錢函 → 小樽</h4><p>JR 函館本線，錢函與小樽都在同一條線上。</p></div></article>
+        <article class="transport-card"><div class="transport-day">D10</div><div><h4>小樽 → 札幌</h4><p>JR 函館本線約 35–50 分鐘。</p></div></article>
+        <article class="transport-card"><div class="transport-day">D11</div><div><h4>札幌 → 新千歲機場</h4><p>上午白色戀人公園，CI131 15:05 起飛；大雪日提早出發。</p></div></article>
+      </div>
+      </div>
+    </details>
+
+    <!-- Live road / driving -->
+    <details class="section-card compact-section live-section">
+      <summary class="compact-section-summary"><div><h3>即時交通與警報</h3><div class="sub">大雪、停駛與道路狀況</div></div><em>展開</em></summary>
+      <div class="compact-section-body">
+      <div class="sub" style="margin-bottom:12px;">連結為官方頁面，內容與判斷規則都可以在編輯模式修改、刪除或新增。</div>
+      <div id="liveRoadWrap"></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- ================= GUIDE VIEW ================= -->
+  <div class="view" id="view-guide">
+
+    <div class="section-card">
+      <h3><img class="h-ic" src="images/nav-guide.webp" alt="" width="28" height="28"> 行李打包清單<img class="h-art" src="images/bird-suitcase.webp" alt="" width="58" height="47"></h3>
+      <div class="sub">2 月上旬札幌白天約 -4～0°C、夜間常到 -8°C 以下，支笏湖與洞爺湖更冷，建議發熱衣＋中層＋羽絨三層穿搭。點擊項目可勾選完成。</div>
+      <div id="packListWrap"></div>
+    </div>
+
+    <div class="section-card">
+      <h3><img class="h-ic" src="images/nav-shopping.webp" alt="" width="28" height="28"> 北海道購物清單</h3>
+      <div class="sub">記得預留行李空間＆秤重額度。您可以自行上傳商品截圖！</div>
+      <div id="shopListWrap"></div>
+    </div>
+
+    <div class="section-card">
+      <h3>📋 旅遊規範與提醒</h3>
+      <div class="sub">您可以自行新增行前準備規範或攜帶物品注意事項，並附上截圖（如海關申報單範例）。</div>
+      <div id="rulesListWrap"></div>
+    </div>
+
+
+    <div class="section-card edit-only" id="surpriseAdmin">
+      <h3>小驚喜內容庫</h3>
+      <div class="sub">點畫面角落偶爾探頭的小動物，會出現這裡的小知識、笑話或旅程照片；同一個帳號會盡量不重複，全部看過一輪才重新開始。</div>
+      <div id="surpriseAdminWrap"></div>
+    </div>
+
+  </div>
+
+  <!-- ================= WEATHER VIEW ================= -->
+  <div class="view" id="view-weather">
+    <div class="section-card" style="margin-bottom:14px;">
+      <h3><img class="h-ic" src="images/nav-weather.webp" alt="" width="28" height="28"> 即時氣象與雪國穿搭指南</h3>
+      <div class="sub">以日本氣象廳（JMA）模式的預報數值顯示千歲、札幌、洞爺湖與小樽的氣溫、風雪與穿搭建議；每個地點下方都有 tenki.jp 逐時／10 天預報連結。</div>
+      <div class="add-row" style="margin-bottom:10px;">
+        <button onclick="loadLiveWeather()" style="flex:1; background:var(--blue); color:#fff; border:none; border-radius:999px; padding:10px 0; font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer; box-shadow:var(--shadow-sm);">🔄 取得最新即時氣象與穿搭</button>
+      </div>
+      <div class="wc-tools"><button type="button" onclick="weatherExpandAll(true)">全部展開</button><button type="button" onclick="weatherExpandAll(false)">全部收合</button></div>
+      <div id="liveWeatherList"></div>
+      <div class="source-note" id="liveWeatherTime">即時資料尚未更新</div>
+    </div>
+
+
+    <div class="section-card" style="margin-bottom:14px;">
+      <h3>❄️ 雪況、祭典與我的地圖</h3>
+      <div class="sub">冬季祭典的點燈時間、會場配置每年會調整，出發前請再確認。也可以上傳自己截取的會場地圖或雪況圖，點圖即可放大。</div>
+      <div class="foliage-links">
+        <a href="https://www.jma.go.jp/bosai/forecast/#area_type=offices&area_code=016000" target="_blank" rel="noopener">日本氣象廳・石狩空知後志地方預報</a>
+        <a href="https://tenki.jp/forecast/1/2/1400/1100/10days.html" target="_blank" rel="noopener">tenki.jp 札幌 10 天預報</a>
+        <a href="https://www.jma.go.jp/bosai/warning/" target="_blank" rel="noopener">日本氣象廳・警報與注意報</a>
+      </div>
+      <div id="foliageMapGallery" class="foliage-map-gallery"></div>
+      <button class="foliage-upload-btn" onclick="document.getElementById('foliageMapFile').click()">📷 上傳雪況／祭典地圖</button>
+      <input type="file" id="foliageMapFile" accept="image/*" multiple style="display:none" onchange="handleFoliageMapUpload(event)">
+    </div>
+    <div class="section-card" style="margin-bottom:14px;">
+      <h3>🌧️ 雨雲與天氣圖</h3>
+      <div class="sub">Windy 圖層可查看北海道的雲雪、風向與體感變化；日本氣象廳按鈕則連到官方即時雨雪雷達。</div>
+      <div class="add-row" style="margin-bottom:10px;">
+        <button onclick="refreshRainRadar()" style="flex:1; background:var(--blue); color:#fff; border:none; border-radius:999px; padding:10px 0; font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer; box-shadow:var(--shadow-sm);">🔄 重新整理雲圖</button>
+      </div>
+      <div id="rainRadarMap" class="windy-embed-wrap"></div>
+      <div class="source-note" id="rainRadarTime">衛星雲圖尚未更新</div>
+      <a href="https://www.jma.go.jp/bosai/realtimerad/" target="_blank" rel="noopener" style="display:block; text-align:center; margin-top:10px; background:#fff; border:1.5px solid var(--blue); color:var(--blue); border-radius:999px; padding:10px 0; font-family:inherit; font-weight:700; font-size:12.5px; text-decoration:none;">🔗 查看日本氣象廳雨雲雷達（另開新分頁）</a>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <div class="bottom-nav" role="tablist">
+    <button class="nav-btn active" onclick="setTab('itinerary')"><img class="nav-img" src="images/nav-itinerary.webp" alt="" width="34" height="34"><span class="lb">行程</span></button>
+    <button class="nav-btn" onclick="setTab('route')"><img class="nav-img" src="images/nav-route.webp" alt="" width="34" height="34"><span class="lb">環線</span></button>
+    <button class="nav-btn" onclick="setTab('guide')"><img class="nav-img" src="images/nav-guide.webp" alt="" width="34" height="34"><span class="lb">指南</span></button>
+    <button class="nav-btn" onclick="setTab('weather')"><img class="nav-img" src="images/nav-weather.webp" alt="" width="34" height="34"><span class="lb">天氣</span></button>
+  </div>
+</div>
+
+<div id="undoToast" class="undo-toast" role="status" aria-live="polite" hidden>
+  <span id="undoToastText">已刪除</span>
+  <button id="undoToastButton" type="button">復原</button>
+</div>
+
+<!-- Modal for Images -->
+<div class="attach-modal" id="attachModal" onclick="closeAttachModal()">
+  <button class="attach-modal-close" onclick="event.stopPropagation(); closeAttachModal()">✕</button>
+  <img id="attachModalImg" src="" onclick="event.stopPropagation()">
+</div>
+
+<!-- Modal for editing a spot's info all at once -->
+<div class="spot-edit-modal" id="spotEditModal" onclick="if(event.target===this)closeSpotEditModal()">
+  <div class="spot-edit-modal-card" onclick="event.stopPropagation()">
+    <div class="spot-edit-modal-head">
+      <h3>✎ 編輯景點資訊</h3>
+      <button class="spot-edit-modal-close" onclick="closeSpotEditModal()">✕</button>
+    </div>
+    <div class="spot-edit-modal-body">
+      <label class="spot-edit-field">
+        <span>景點名稱</span>
+        <input type="text" id="editSpotName" placeholder="景點名稱">
+      </label>
+      <label class="spot-edit-field">
+        <span>簡介（標題下方一行）</span>
+        <input type="text" id="editSpotDesc" placeholder="一句話簡介">
+      </label>
+      <label class="spot-edit-field">
+        <span>內文簡介（點開卡片後顯示的完整段落）</span>
+        <textarea id="editSpotFullDesc" rows="4" placeholder="展開後顯示的完整介紹"></textarea>
+      </label>
+      <label class="spot-edit-field">
+        <span>建議停留時間</span>
+        <input type="text" id="editSpotDur" placeholder="例：約 1–1.5 小時（清空＝刪除）">
+      </label>
+      <label class="spot-edit-field">
+        <span>營業／開放時間</span>
+        <input type="text" id="editSpotHours" placeholder="例：09:00–17:00，週一公休">
+      </label>
+      <label class="spot-edit-field">
+        <span>重要提點／門票</span>
+        <textarea id="editSpotNote" rows="2" placeholder="門票資訊、注意事項..."></textarea>
+      </label>
+      <label class="spot-edit-field">
+        <span>評論與資訊</span>
+        <textarea id="editSpotInfo" rows="2" placeholder="這個景點的一句話心得或攻略"></textarea>
+      </label>
+      <div id="hotelAmenityFields" class="hotel-amen-fields" style="display:none;">
+        <div class="hotel-amen-title">🏨 住宿設施</div>
+        <label class="spot-edit-field"><span>浴缸</span><select id="editAmen_bath"><option value="">待確認</option><option value="yes">有浴缸</option><option value="no">無浴缸</option></select></label>
+        <label class="spot-edit-field"><span>免費洗衣機</span><select id="editAmen_laundry"><option value="">待確認</option><option value="yes">有免費洗衣機</option><option value="no">無免費洗衣機</option></select></label>
+        <label class="spot-edit-field"><span>早餐</span><select id="editAmen_breakfast"><option value="">待確認</option><option value="yes">有早餐</option><option value="no">無早餐</option></select></label>
+        <label class="spot-edit-field"><span>晚餐</span><select id="editAmen_dinner"><option value="">待確認</option><option value="yes">有晚餐</option><option value="no">無晚餐</option></select></label>
+      </div>
+      <label class="spot-edit-field">
+        <span>導航位置（可貼 Google Maps 分享網址、地址、經緯度或搜尋關鍵字）</span>
+        <input type="text" id="editSpotMapQuery" placeholder="未填時使用景點名稱">
+      </label>
+    </div>
+    <div class="spot-edit-modal-actions">
+      <button class="spot-edit-reset" onclick="resetSpotEditModal()">還原全部為預設</button>
+      <button class="spot-edit-save" onclick="saveSpotEditModal()">💾 儲存</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="restoreFile" accept="application/json,.json" style="display:none" onchange="restoreBackupFile(event)">
+
+<script src="app.js?v=hk7"></script>
+
+
+<div id="hokkaidoSplash" class="splash" hidden aria-label="雪羽慢旅載入中">
+  <button class="splash__skip" type="button">略過</button>
+  <div class="splash__stage">
+    <div class="splash__sun"></div>
+    <img class="splash__bird splash__deer--travel" src="images/splash-bird-suitcase.webp" alt="小山雀拖著行李出發">
+    <div class="splash__map-wrap">
+      <img class="splash__bird splash__deer--map" src="images/splash-bird-gondola.webp" alt="小山雀搭纜車">
+    </div>
+    <img class="splash__bird splash__deer--wakeup" src="images/splash-bird-berries.webp" alt="小山雀停在紅果枝上">
+    <i class="flake flake--1"></i><i class="flake flake--2"></i><i class="flake flake--3"></i><i class="flake flake--4"></i><i class="flake flake--5"></i>
+    <div class="splash__title"><strong>雪羽慢旅</strong><span>跟著小山雀，收藏北海道的冬日風景</span></div>
+  </div>
+</div>
+<script src="splash.js?v=hk7"></script>
+</body>
+</html>
