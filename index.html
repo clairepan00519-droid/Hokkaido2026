@@ -21,8 +21,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=Caveat:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="preload" href="fonts/ChenYuluoyan-Thin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=hk7">
-<link rel="stylesheet" href="splash.css?v=hk7">
+<link rel="stylesheet" href="style.css?v=hk8">
+<link rel="stylesheet" href="splash.css?v=hk8">
 </head>
 <body class="family-locked">
 
@@ -115,9 +115,15 @@
       <a href="https://www.google.com/maps/dir/New+Chitose+Airport/Lake+Shikotsu/Sapporo/Lake+Toya/Otaru/Sapporo/New+Chitose+Airport" target="_blank" rel="noopener" class="btn btn-map" style="display:flex; margin-top:12px; text-decoration:none;">🗺️ 在 Google 地圖開啟主要路線</a>
     </div>
 
+    <!-- 11 天一覽 -->
+    <div class="section-card route-timeline-card">
+      <h3><img class="h-ic" src="images/nav-itinerary.webp" alt="" width="30" height="30"> 11 天一覽<span class="rt-hint">點一天直接看行程</span></h3>
+      <div id="routeTimeline" class="route-timeline"></div>
+    </div>
+
     <!-- Flights -->
     <div class="section-card">
-      <h3>✈️ 飛航與主要交通</h3>
+      <h3><img class="h-ic" src="images/art-route.webp" alt="" width="30" height="30"> 飛航與主要交通</h3>
       <div class="flight-box"><div class="ftitle">🛫 去程 TPE → CTS</div><div class="flight-row"><span>日期</span><span>2027.02.04（四）</span></div><div class="flight-row"><span>時間</span><span>08:35 → 13:35</span></div><div class="flight-row"><span>航班</span><span>中華航空 CI130</span></div></div>
       <div class="flight-box"><div class="ftitle">🛬 回程 CTS → TPE</div><div class="flight-row"><span>日期</span><span>2027.02.14（日）</span></div><div class="flight-row"><span>時間</span><span>15:05 → 18:15</span></div><div class="flight-row"><span>航班</span><span>中華航空 CI131</span></div></div>
       <div class="source-note">※ 航班時間以最終票券為準。</div>
@@ -125,13 +131,13 @@
 
     <!-- Docs -->
     <details class="section-card compact-section voucher-section">
-      <summary class="compact-section-summary"><div><h3>行程票券與住宿總匯</h3><div class="sub">住宿、航班與預約憑證</div></div><em>展開</em></summary>
+      <summary class="compact-section-summary"><img class="cs-art" src="images/art-lodging.webp" alt=""><div><h3>行程票券與住宿總匯</h3><div class="sub">住宿、航班與預約憑證</div></div><em>展開</em></summary>
       <div class="compact-section-body"><div id="docsListWrap" class="voucher-list"></div></div>
     </details>
 
     <!-- Driving -->
     <details class="section-card compact-section transport-section">
-      <summary class="compact-section-summary"><div><h3>交通提醒</h3><div class="sub">各日搭乘提醒、官方連結</div></div><em>展開</em></summary>
+      <summary class="compact-section-summary"><img class="cs-art" src="images/nav-route.webp" alt=""><div><h3>交通提醒</h3><div class="sub">各日搭乘提醒、官方連結</div></div><em>展開</em></summary>
       <div class="compact-section-body">
       <div class="sub" style="margin-bottom:12px;">收到正式交通安排後會逐日補上；目前先列出主要移動段。</div>
       <details class="transport-principles">
@@ -155,7 +161,7 @@
 
     <!-- Live road / driving -->
     <details class="section-card compact-section live-section">
-      <summary class="compact-section-summary"><div><h3>即時交通與警報</h3><div class="sub">大雪、停駛與道路狀況</div></div><em>展開</em></summary>
+      <summary class="compact-section-summary"><img class="cs-art" src="images/nav-weather.webp" alt=""><div><h3>即時交通與警報</h3><div class="sub">大雪、停駛與道路狀況</div></div><em>展開</em></summary>
       <div class="compact-section-body">
       <div class="sub" style="margin-bottom:12px;">連結為官方頁面，內容與判斷規則都可以在編輯模式修改、刪除或新增。</div>
       <div id="liveRoadWrap"></div>
@@ -308,7 +314,7 @@
 
 <input type="file" id="restoreFile" accept="application/json,.json" style="display:none" onchange="restoreBackupFile(event)">
 
-<script src="app.js?v=hk7"></script>
+<script src="app.js?v=hk8"></script>
 
 
 <div id="hokkaidoSplash" class="splash" hidden aria-label="雪羽慢旅載入中">
@@ -324,6 +330,6 @@
     <div class="splash__title"><strong>雪羽慢旅</strong><span>跟著小山雀，收藏北海道的冬日風景</span></div>
   </div>
 </div>
-<script src="splash.js?v=hk7"></script>
+<script src="splash.js?v=hk8"></script>
 </body>
 </html>

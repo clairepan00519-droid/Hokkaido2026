@@ -2680,7 +2680,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk7-2026-10-02';
+const APP_VERSION='hk8-2026-10-03';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -3456,7 +3456,7 @@ function shopGalleryHTML(){
 function shopItemEditHTML(it,i){
   const imgs=shopImgs(it);
   const photosHTML=imgs.length?`<div class="shop-photo-row">${imgs.map((src,pi)=>`<div class="shop-photo"><img src="${escAttr(src)}" data-src="${escAttr(src)}" onclick="openAttachModal(this.dataset.src)"><button onclick="removeShopImg(${i},${pi})">✕</button></div>`).join('')}</div>`:'';
-  return `<div class="pack-item shop-item ${it.checked?'checked':''}"><input type="checkbox" ${it.checked?'checked':''} onchange="toggleShop(${i})"><div class="name shop-item-title">${escHtml(it.name)}</div><div class="qty"><button onclick="document.getElementById('shopFile-${i}').click()" class="camera-btn">照片</button><button onclick="changeShopQty(${i},-1)">－</button><span>${Number(it.qty)||1}</span><button onclick="changeShopQty(${i},1)">＋</button></div><button class="pack-edit-btn" onclick="editShopItem(${i})" title="修改名稱、分類與說明">✎</button><button class="del" onclick="delShop(${i})">✕</button><input type="file" id="shopFile-${i}" accept="image/*" multiple style="display:none" onchange="handleShopPhoto(event, ${i})"><div class="shop-extra"><textarea rows="2" placeholder="說明：品牌、規格、想買的店…（旅行模式會顯示在圖片下方）" onchange="setShopLocation(${i}, this.value)">${escHtml(it.location||'')}</textarea></div>${photosHTML}</div>`;
+  return `<div class="pack-item shop-item ${it.checked?'checked':''}"><input type="checkbox" ${it.checked?'checked':''} onchange="toggleShop(${i})"><div class="name shop-item-title">${escHtml(it.name)}</div><div class="qty"><button onclick="document.getElementById('shopFile-${i}').click()" class="camera-btn">照片</button><button onclick="changeShopQty(${i},-1)">－</button><span>${Number(it.qty)||1}</span><button onclick="changeShopQty(${i},1)">＋</button></div><button class="pack-edit-btn" onclick="editShopItem(${i})" title="修改名稱、分類與說明">✎</button><button class="del" onclick="delShop(${i})">✕</button><input type="file" id="shopFile-${i}" accept="image/*" multiple style="display:none" onchange="handleShopPhoto(event, ${i})">${it.location?`<div class="shop-note">${escHtml(it.location)}</div>`:''}<div class="shop-extra edit-only"><textarea rows="2" placeholder="說明：品牌、規格、想買的店…（旅行模式會顯示在圖片下方）" onchange="setShopLocation(${i}, this.value)">${escHtml(it.location||'')}</textarea></div>${photosHTML}</div>`;
 }
 function renderShopList(){
   const wrap=document.getElementById('shopListWrap');if(!wrap)return;
@@ -4067,3 +4067,19 @@ function removeFoliageMap(i){ if(!confirm('刪除這張雪況地圖？'))return;
 document.addEventListener('DOMContentLoaded',renderFoliageMaps);
 
 
+
+
+/* ============ hk8：環線頁「11 天一覽」 ============ */
+function renderRouteTimeline(){
+  const el=document.getElementById('routeTimeline');if(!el)return;
+  el.innerHTML=days.map((d,i)=>{
+    const hotel=(d.moreSpots||[]).find(s=>s.cat==='hotel');
+    const hotelName=hotel?(currentFieldValue(`d${i}-s${(d.moreSpots||[]).indexOf(hotel)}`,'name',hotel.name)||hotel.name):'返家';
+    return `<button type="button" class="rt-day" onclick="setTab('itinerary');setActiveDay(${i});window.scrollTo({top:0,behavior:'smooth'})">
+      <img class="rt-ic" src="${DAY_ICON_IMG[i]}" alt="" loading="lazy">
+      <span class="rt-body"><span class="rt-date">DAY ${String(d.dayNum).padStart(2,'0')} · ${d.date}（${d.weekday}）</span>
+      <strong class="rt-title">${escHtml(d.title)}</strong>
+      <span class="rt-route">${escHtml(d.enRegion)}</span>
+      <span class="rt-hotel">🛏 ${escHtml(hotelName)}</span></span></button>`;}).join('');
+}
+renderRouteTimeline();
