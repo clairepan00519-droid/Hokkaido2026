@@ -1,0 +1,18 @@
+.snowbird-widget{position:fixed;right:max(14px,env(safe-area-inset-right));bottom:calc(80px + env(safe-area-inset-bottom));z-index:900;width:112px;font-family:inherit;color:#27478c}
+.snowbird-widget[hidden],.snowbird-widget [hidden]{display:none!important}
+.snowbird-left{right:auto;left:max(14px,env(safe-area-inset-left))}
+.snowbird-bird{display:block;border:0;background:transparent;padding:0;width:112px;height:112px;cursor:pointer;border-radius:24px}
+.snowbird-bird img{display:block;width:100%;height:100%;object-fit:contain}
+.snowbird-bird:focus-visible,.snowbird-controls button:focus-visible{outline:2px solid #3f6cc4;outline-offset:3px}
+.snowbird-bubble{position:absolute;bottom:116px;right:0;width:min(280px,calc(100vw - 42px));box-sizing:border-box;background:#fffdf8;border:1px solid #abc2ec;border-radius:18px;padding:16px;box-shadow:0 6px 22px #27478c20;line-height:1.65}
+.snowbird-left .snowbird-bubble{right:auto;left:0}
+.snowbird-bubble small{font-size:12px;color:#5e88cc}.snowbird-bubble p{font-size:15px;margin:8px 0;white-space:normal}.snowbird-bubble a{font-size:12px;color:#3f6cc4}
+.snowbird-controls{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}.snowbird-controls button{font:inherit;font-size:12px;border:1px solid #abc2ec;border-radius:12px;padding:5px 9px;background:#eef3fc;color:#27478c;cursor:pointer;min-height:34px}
+@media(prefers-reduced-motion:no-preference){.snowbird-bird{animation:snowbird-arrive .5s ease-out}@keyframes snowbird-arrive{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}}
+@media(max-width:480px){.snowbird-widget{width:96px}.snowbird-bird{width:96px;height:96px}.snowbird-bubble{bottom:101px}}
+
+/* 雪羽慢旅：避開底部導覽列、沿用網站字體 */
+.snowbird-widget{bottom:calc(104px + env(safe-area-inset-bottom));font-family:'LXGW WenKai TC',serif}
+.snowbird-bubble p{font-size:15px;text-wrap:pretty}
+body.large-text .snowbird-bubble p{font-size:18px}
+body.large-text .snowbird-bubble small,body.large-text .snowbird-controls button{font-size:14px}

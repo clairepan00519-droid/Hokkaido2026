@@ -21,8 +21,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=Caveat:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="preload" href="fonts/ChenYuluoyan-Thin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=hk8">
-<link rel="stylesheet" href="splash.css?v=hk8">
+<link rel="stylesheet" href="style.css?v=hk9">
+<link rel="stylesheet" href="splash.css?v=hk9">
+<link rel="stylesheet" href="snowbird/snowbird-widget.css?v=hk9">
 </head>
 <body class="family-locked">
 
@@ -116,10 +117,10 @@
     </div>
 
     <!-- 11 天一覽 -->
-    <div class="section-card route-timeline-card">
-      <h3><img class="h-ic" src="images/nav-itinerary.webp" alt="" width="30" height="30"> 11 天一覽<span class="rt-hint">點一天直接看行程</span></h3>
+    <details class="section-card route-timeline-card" open>
+      <summary class="rt-summary"><img class="h-ic" src="images/nav-itinerary.webp" alt="" width="30" height="30"><span class="rt-sum-title">11 天一覽</span><span class="rt-hint">點一天直接看行程</span><em class="rt-toggle"></em></summary>
       <div id="routeTimeline" class="route-timeline"></div>
-    </div>
+    </details>
 
     <!-- Flights -->
     <div class="section-card">
@@ -188,13 +189,6 @@
       <h3>📋 旅遊規範與提醒</h3>
       <div class="sub">您可以自行新增行前準備規範或攜帶物品注意事項，並附上截圖（如海關申報單範例）。</div>
       <div id="rulesListWrap"></div>
-    </div>
-
-
-    <div class="section-card edit-only" id="surpriseAdmin">
-      <h3>小驚喜內容庫</h3>
-      <div class="sub">點畫面角落偶爾探頭的小動物，會出現這裡的小知識、笑話或旅程照片；同一個帳號會盡量不重複，全部看過一輪才重新開始。</div>
-      <div id="surpriseAdminWrap"></div>
     </div>
 
   </div>
@@ -314,7 +308,9 @@
 
 <input type="file" id="restoreFile" accept="application/json,.json" style="display:none" onchange="restoreBackupFile(event)">
 
-<script src="app.js?v=hk8"></script>
+<script src="snowbird/snowbird-content.js?v=hk9"></script>
+<script src="snowbird/snowbird-widget.js?v=hk9"></script>
+<script src="app.js?v=hk9"></script>
 
 
 <div id="hokkaidoSplash" class="splash" hidden aria-label="雪羽慢旅載入中">
@@ -330,6 +326,6 @@
     <div class="splash__title"><strong>雪羽慢旅</strong><span>跟著小山雀，收藏北海道的冬日風景</span></div>
   </div>
 </div>
-<script src="splash.js?v=hk8"></script>
+<script src="splash.js?v=hk9"></script>
 </body>
 </html>

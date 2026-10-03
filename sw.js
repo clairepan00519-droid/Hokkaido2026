@@ -1,10 +1,11 @@
 /* 北海道冬旅行程：App Shell、圖片與已瀏覽內容離線快取 */
-const CACHE_VERSION='hokkaido-trip-hk8';
+const CACHE_VERSION='hokkaido-trip-hk9';
 const SHELL_CACHE=`hokkaido-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE=`hokkaido-runtime-${CACHE_VERSION}`;
 /* 圖片快取獨立於版本：更新網站不會清掉已下載的圖片，也不必重新下載 */
 const IMAGE_CACHE='hokkaido-images-persist';
-const SHELL=['./','./index.html','./app.js','./style.css','./splash.css','./splash.js','./manifest.webmanifest','./fonts/ChenYuluoyan-Thin.woff2','./images/apple-touch-icon.png','./images/art-lodging.webp','./images/art-route.webp','./images/art-shopping.webp','./images/bird-bow.webp','./images/bird-cookie.webp','./images/bird-fly.webp','./images/bird-gondola.webp','./images/bird-onsen.webp','./images/bird-shopping.webp','./images/bird-snowball.webp','./images/bird-suitcase.webp','./images/bird-tram.webp','./images/day01.webp','./images/day02.webp','./images/day03.webp','./images/day04.webp','./images/day05.webp','./images/day06.webp','./images/day07.webp','./images/day08.webp','./images/day09.webp','./images/day10.webp','./images/day11.webp','./images/favicon.png','./images/header.webp','./images/icon-192.png','./images/icon-512.png','./images/icon-maskable-512.png','./images/logo.webp','./images/map.webp','./images/nav-food.webp','./images/nav-guide.webp','./images/nav-itinerary.webp','./images/nav-lodging.webp','./images/nav-route.webp','./images/nav-shopping.webp','./images/nav-weather.webp','./images/scene-airport.webp','./images/scene-crab.webp','./images/scene-doucho.webp','./images/scene-fireworks.webp','./images/scene-gondola.webp','./images/scene-ice.webp','./images/scene-moerenuma.webp','./images/scene-otaru-cheesecake.webp','./images/scene-otaru-market.webp','./images/scene-shiroikoibito.webp','./images/scene-shrine-moiwa.webp','./images/splash-bird-berries.webp','./images/splash-bird-gondola.webp','./images/splash-bird-suitcase.webp'];
+const LOCAL_MEDIA_CACHE='hokkaido-local-media';
+const SHELL=['./','./index.html','./app.js','./style.css','./splash.css','./splash.js','./manifest.webmanifest','./fonts/ChenYuluoyan-Thin.woff2','./snowbird/snowbird-widget.css','./snowbird/snowbird-widget.js','./snowbird/snowbird-content.js','./snowbird/assets/snowbird-01.webp','./snowbird/assets/snowbird-02.webp','./snowbird/assets/snowbird-03.webp','./snowbird/assets/snowbird-04.webp','./snowbird/assets/snowbird-05.webp','./snowbird/assets/snowbird-06.webp','./snowbird/assets/snowbird-07.webp','./snowbird/assets/snowbird-08.webp','./images/apple-touch-icon.png','./images/art-lodging.webp','./images/art-route.webp','./images/art-shopping.webp','./images/bird-bow.webp','./images/bird-cookie.webp','./images/bird-fly.webp','./images/bird-gondola.webp','./images/bird-onsen.webp','./images/bird-shopping.webp','./images/bird-snowball.webp','./images/bird-suitcase.webp','./images/bird-tram.webp','./images/day01.webp','./images/day02.webp','./images/day03.webp','./images/day04.webp','./images/day05.webp','./images/day06.webp','./images/day07.webp','./images/day08.webp','./images/day09.webp','./images/day10.webp','./images/day11.webp','./images/favicon.png','./images/header.webp','./images/icon-192.png','./images/icon-512.png','./images/icon-maskable-512.png','./images/logo.webp','./images/map.webp','./images/nav-food.webp','./images/nav-guide.webp','./images/nav-itinerary.webp','./images/nav-lodging.webp','./images/nav-route.webp','./images/nav-shopping.webp','./images/nav-weather.webp','./images/scene-airport.webp','./images/scene-crab.webp','./images/scene-doucho.webp','./images/scene-fireworks.webp','./images/scene-gondola.webp','./images/scene-ice.webp','./images/scene-moerenuma.webp','./images/scene-otaru-cheesecake.webp','./images/scene-otaru-market.webp','./images/scene-shiroikoibito.webp','./images/scene-shrine-moiwa.webp','./images/splash-bird-berries.webp','./images/splash-bird-gondola.webp','./images/splash-bird-suitcase.webp'];
 
 self.addEventListener('install',event=>{
   self.skipWaiting();
@@ -17,7 +18,7 @@ self.addEventListener('install',event=>{
 
 self.addEventListener('activate',event=>{
   event.waitUntil(caches.keys()
-    .then(keys=>Promise.all(keys.filter(k=>k!==SHELL_CACHE&&k!==RUNTIME_CACHE&&k!==IMAGE_CACHE).map(k=>caches.delete(k))))
+    .then(keys=>Promise.all(keys.filter(k=>k!==SHELL_CACHE&&k!==RUNTIME_CACHE&&k!==IMAGE_CACHE&&k!==LOCAL_MEDIA_CACHE).map(k=>caches.delete(k))))
     .then(async()=>{
       await self.clients.claim();
       /* 不強制重新載入（會打斷正在輸入的家人），改通知頁面由使用者決定 */
@@ -67,6 +68,11 @@ self.addEventListener('fetch',event=>{
   const req=event.request;if(req.method!=='GET')return;
   let url;try{url=new URL(req.url);}catch(e){return;}
   if(isWeather(url))return;
+  /* 單機預覽模式上傳的照片 */
+  if(url.origin===self.location.origin&&url.pathname.includes('/local-media/')){
+    event.respondWith(caches.open(LOCAL_MEDIA_CACHE).then(c=>c.match(url.href)).then(r=>r||new Response('',{status:404})));
+    return;
+  }
 
   if(req.mode==='navigate'){
     event.respondWith(fetch(req).then(res=>{const copy=res.clone();caches.open(SHELL_CACHE).then(c=>c.put('./index.html',copy));return res;}).catch(async()=>await caches.match('./index.html')||await caches.match('./')));

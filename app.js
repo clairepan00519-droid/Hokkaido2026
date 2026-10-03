@@ -204,14 +204,14 @@ async function compressImageToBlob(file){
   if(!file.type.startsWith('image/')) return file;
   const dataUrl = await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});
   const img = await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=dataUrl;});
-  const MAX_DIM=1800; let w=img.naturalWidth,h=img.naturalHeight;
+  const MAX_DIM=1600; let w=img.naturalWidth,h=img.naturalHeight;
   if(w>MAX_DIM||h>MAX_DIM){if(w>h){h=Math.round(h*MAX_DIM/w);w=MAX_DIM;}else{w=Math.round(w*MAX_DIM/h);h=MAX_DIM;}}
   const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; canvas.getContext('2d').drawImage(img,0,0,w,h);
   return await new Promise(resolve=>canvas.toBlob(b=>resolve(b||file),'image/jpeg',0.84));
 }
 async function uploadMediaBlob(blob, folder='uploads'){
   /* 單機預覽模式：圖片先以 Base64 存在這台裝置，接上 Supabase 後會自動搬到雲端 */
-  if(!CLOUD_CONFIGURED) return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});
+  if(!CLOUD_CONFIGURED) return await saveLocalMedia(blob);
   if(!navigator.onLine) throw new Error('目前離線，照片會在恢復網路後才能上傳');
   await ensureAuthToken();
   const ext=blob.type==='image/png'?'png':blob.type==='image/webp'?'webp':'jpg';
@@ -227,7 +227,19 @@ async function uploadMediaBlob(blob, folder='uploads'){
 }
 async function uploadMediaFile(file, folder){ return uploadMediaBlob(await compressImageToBlob(file),folder); }
 async function uploadLegacyDataUrl(dataUrl, folder){ const blob=await (await fetch(dataUrl)).blob(); return uploadMediaBlob(blob,folder); }
-function isLegacyDataUrl(v){ return typeof v==='string' && /^data:image\//i.test(v); }
+function isLegacyDataUrl(v){ return typeof v==='string' && (/^data:image\//i.test(v) || (CLOUD_CONFIGURED && /(^|\/)local-media\//.test(v))); }
+/* 單機預覽模式的照片：存進瀏覽器的 Cache Storage（容量比 localStorage 大很多），
+   由 Service Worker 以 local-media/<id> 網址提供。接上 Supabase 後會自動搬到雲端。 */
+const LOCAL_MEDIA_CACHE='hokkaido-local-media';
+async function saveLocalMedia(blob){
+  if(!('caches' in window)) return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});
+  const id=(crypto.randomUUID?crypto.randomUUID():Date.now()+'-'+Math.random().toString(36).slice(2));
+  const ext=blob.type==='image/png'?'png':blob.type==='image/webp'?'webp':'jpg';
+  const path=`local-media/${id}.${ext}`;
+  const cache=await caches.open(LOCAL_MEDIA_CACHE);
+  await cache.put(new URL(path,location.href).href,new Response(blob,{headers:{'Content-Type':blob.type||'image/jpeg'}}));
+  return path;
+}
 
 /* 將任何深度的舊 Base64 圖片遞迴搬到 Storage。
    這同時處理景點照片、封面、路線圖、購物、規範及憑證。 */
@@ -2126,7 +2138,7 @@ function removeDocImg(i) { const removed=docsData[i].img;docsData[i].img = null;
 /* 舊版曾把圖片 Base64 放進 localStorage。首次載入新版時，逐張搬到 Supabase Storage，
    成功後只保留短網址，從根本解決 QuotaExceededError。 */
 async function migrateLegacyMediaToCloud(){
-  if(!navigator.onLine) return false;
+  if(CLOUD_CONFIGURED&&!navigator.onLine) return false;
   const progress={done:0,total:0};
   const stores={
     hokkaido_photos:photoStore,
@@ -2680,7 +2692,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk8-2026-10-03';
+const APP_VERSION='hk9-2026-10-03';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -3063,7 +3075,7 @@ function openToolsSheet(){
     sync:()=>syncNowManual(),
     diag:()=>{closeToolsSheet();diagnoseCloud();},
     precache:()=>startOfflinePrecache(true),
-    surprise:()=>{closeToolsSheet();showSurprise();},
+    surprise:()=>{closeToolsSheet();if(window.snowbird){window.snowbird.resume&&0;window.snowbird.open();}},
     force:()=>{closeToolsSheet();forceRefreshApp();}
   };
   wrap.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>acts[b.dataset.act]&&acts[b.dataset.act]());
@@ -3166,15 +3178,17 @@ function dayWeatherPanelHTML(i){
   const d=days[i],cities=DAY_CITIES[i]||['Sapporo'];
   const cards=cities.map(k=>{
     const e=weatherEntryFor(k),cw=e&&e.data&&e.data.current;
-    const sun=daySunText(i,k);
-    const tenki=`<a class="dw-tenki" href="${escAttr(TENKI_LINKS[k]||'https://tenki.jp/')}" target="_blank" rel="noopener">tenki.jp 預報 ↗</a>`;
-    const sunRow=sun?`<div class="dw-sun"><span>${d.date} ${sun}</span></div>`:'';
-    if(!cw)return `<div class="dw-card"><div class="dw-place">${escHtml(CITIES[k].label)}</div>${sunRow}<div class="dw-empty">尚未取得即時氣象，按下方「更新」。</div>${tenki}</div>`;
+    const sun=daySunText(i,k)||'';
+    const sm=sun.match(/日出\s*(\d{1,2}:\d{2}).*日落\s*(\d{1,2}:\d{2})/);
+    const sunRow=sm?`<div class="dw-sun2"><span>☀︎ 日出 ${sm[1]}</span><span>☾ 日落 ${sm[2]}</span></div>`:(sun?`<div class="dw-sun2"><span>${escHtml(sun)}</span></div>`:'');
+    const tenki=`<a class="dw-tenki2" href="${escAttr(TENKI_LINKS[k]||'https://tenki.jp/')}" target="_blank" rel="noopener">tenki.jp 預報 ↗</a>`;
+    if(!cw)return `<div class="dw-card2 is-empty"><div class="dw-place2">${escHtml(CITIES[k].label)}</div><div class="dw-main2"><span class="dw-ico2">❄️</span><b class="dw-na">—</b></div><div class="dw-desc2">尚未取得即時氣象</div>${sunRow}${tenki}</div>`;
     const [ico,desc]=wmoInfo(cw.weather_code),temp=Math.round(cw.temperature_2m);
+    const tone=temp<=-5?'t-deep':temp<=0?'t-cold':temp<=8?'t-cool':'t-mild';
     const when=e.fetchedAt?new Date(e.fetchedAt).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-    return `<div class="dw-card"><div class="dw-place">${escHtml(CITIES[k].label)}${e.stale?'<em>快取</em>':''}</div>${sunRow}<div class="dw-main"><span>${ico}</span><b>${temp}°C</b><i>${desc}</i></div><div class="dw-metrics">風 ${cw.wind_speed_10m} km/h　雨量 ${cw.precipitation} mm</div>${when?`<small>目前氣象更新 ${when}</small>`:''}${tenki}</div>`;
+    return `<div class="dw-card2 ${tone}"><div class="dw-place2">${escHtml(CITIES[k].label)}${e.stale?'<em>快取</em>':''}</div><div class="dw-main2"><span class="dw-ico2">${ico}</span><b>${temp}°</b></div><div class="dw-desc2">${desc}</div><div class="dw-metrics2"><span>💨 ${cw.wind_speed_10m} km/h</span><span>☔ ${cw.precipitation} mm</span></div>${sunRow}${when?`<small class="dw-when2">更新 ${when}</small>`:''}${tenki}</div>`;
   }).join('');
-  return `<div class="day-panel"><div class="dp-title"><span>今日天氣與穿搭</span></div><div class="dw-wear"><span>建議穿搭：${escHtml(d.wear||'')}</span>${cities.some(k=>{const e=weatherEntryFor(k),c=e&&e.data&&e.data.current&&e.data.current.weather_code;return [51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99].includes(c);})?'<img class="dw-art" src="images/bird-bow.webp" alt="" width="54" height="69">':''}</div><div class="dw-grid">${cards}</div><button type="button" class="dp-btn" onclick="refreshDayWeather()">更新即時氣象</button><p class="dp-note">日出日落依 ${d.date} 日期計算；氣溫為「現在」的天氣，出發前 2–3 天請再看 tenki.jp 預報。</p><button type="button" class="dp-link" onclick="setTab('weather')">看完整天氣與雨雲圖 ›</button></div>`;
+  return `<div class="day-panel dw2"><div class="dw2-head"><div><small>${d.date}（${d.weekday}）</small><strong>今日天氣與穿搭</strong></div><img src="images/nav-weather.webp" alt="" width="64" height="64"></div><div class="dw2-wear"><span class="dw2-wear-ic">🧣</span><div><small>建議穿搭</small><span>${escHtml(d.wear||'')}</span></div></div><div class="dw2-grid${cities.length>1?' two':''}">${cards}</div><button type="button" class="dp-btn" onclick="refreshDayWeather()">更新即時氣象</button><p class="dp-note">日出日落依 ${d.date} 計算；氣溫是「現在」的天氣，出發前 2–3 天再看 tenki.jp 預報。</p><button type="button" class="dp-link" onclick="setTab('weather')">看完整天氣與雨雲圖 ›</button></div>`;
 }
 
 /* ---------- 小驚喜（點角落的小動物：小知識、笑話、旅程照片；同帳號盡量不重複） ---------- */
@@ -3281,7 +3295,7 @@ function spawnPeek(){
 }
 /* (v54 已改寫) */   /* 之後約每 4–8 分鐘一次 */
 /* (v54 已改寫) */
-document.addEventListener('DOMContentLoaded',()=>{startCritters();initSurprises();});
+document.addEventListener('DOMContentLoaded',()=>{initSurprises();try{initSnowbird();}catch(e){console.warn(e)}});
 
 /* =====================================================================
    v52：吃逛資料以「吃·北海道／逛·北海道」為本體、可排入某天的食衣住；
@@ -4083,3 +4097,23 @@ function renderRouteTimeline(){
       <span class="rt-hotel">🛏 ${escHtml(hotelName)}</span></span></button>`;}).join('');
 }
 renderRouteTimeline();
+
+/* hk9：單機預覽模式啟動時，把以前存在 localStorage 的 Base64 照片搬進 Cache Storage，釋放空間 */
+if(!CLOUD_CONFIGURED&&'caches' in window){
+  window.addEventListener('load',()=>setTimeout(async()=>{
+    try{
+      const hasB64=Object.keys(localStorage).some(k=>k.startsWith('hokkaido_')&&/data:image\//.test(localStorage.getItem(k)||''));
+      if(!hasB64)return;
+      if(navigator.serviceWorker&&!navigator.serviceWorker.controller)return; /* 等 Service Worker 接手後的下一次開啟再搬 */
+      await migrateLegacyMediaToCloud();
+      if(typeof safeRenderDayContent==='function')safeRenderDayContent();
+    }catch(e){console.warn('本機照片搬移失敗',e);}
+  },1500));
+}
+/* 行程頁最下方的小雪雀換成新的角落小雪雀插圖 */
+CRITTER_IMGS.length=0;for(let i=1;i<=8;i++)CRITTER_IMGS.push(`snowbird/assets/snowbird-0${i}.webp`);
+
+/* 11 天一覽：記住收合狀態 */
+(function(){const d=document.querySelector('.route-timeline-card');if(!d)return;
+  try{if(localStorage.getItem('hokkaido_rt_open')==='0')d.open=false;}catch(e){}
+  d.addEventListener('toggle',()=>{try{localStorage.setItem('hokkaido_rt_open',d.open?'1':'0')}catch(e){}});})();
