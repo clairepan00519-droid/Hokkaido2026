@@ -2267,3 +2267,125 @@ body.large-text .header-tools .ht-pill{font-size:14.5px!important;}
 body.large-text .bottom-nav button .lb{font-size:15.5px!important;}
 body.large-text .nav-img{width:40px!important;height:40px!important;}
 body.large-text .sub-spot-card.open>.sub-spot-header h4{font-size:19px!important;}
+
+/* ===== hk11：新手／長輩友善（移植自京丹雅行 v81、v83，配色改成雪羽藍） ===== */
+/* 登入畫面：文字放大；輸入框 17px（iPhone 小於 16px 會自動放大畫面） */
+.family-gate-card p{font-size:15px!important;}
+.family-gate-card input{font-size:17px!important;padding:15px 16px!important;}
+.family-gate-card button{font-size:17px!important;min-height:52px;}
+.family-gate-error{font-size:15px!important;}
+/* 只看模式提示 */
+.relogin-banner{display:flex;align-items:center;gap:10px;margin:8px 12px;padding:12px 14px;border-radius:16px;background:#FFF6DC;border:1.5px solid #E6C56E;color:#5E4600;font-size:14.5px;font-weight:700;line-height:1.5;}
+.relogin-banner span{flex:1;}
+.relogin-banner button{flex:none;min-height:46px;padding:0 16px;border:0;border-radius:999px;background:var(--blue);color:#fff;font:inherit;font-size:15px;font-weight:900;cursor:pointer;}
+/* 編輯模式提示列（旅行模式不顯示） */
+.edit-mode-bar{display:none;}
+body.mode-edit .edit-mode-bar{display:flex;position:sticky;top:0;z-index:600;align-items:center;gap:10px;margin:0 0 6px;padding:10px 14px;background:#5B4A8C;color:#fff;font-size:14.5px;font-weight:800;box-shadow:0 4px 12px rgba(40,40,90,.3);}
+body.mode-edit .edit-mode-bar span{flex:1;}
+body.mode-edit .edit-mode-bar button{flex:none;min-height:42px;padding:0 16px;border:0;border-radius:999px;background:#fff;color:#5B4A8C;font:inherit;font-size:15px;font-weight:900;cursor:pointer;}
+.header-tools #modeBtn.edit{background:#5B4A8C!important;color:#fff!important;}
+/* 每段交通：導航／給司機看 */
+.tp-go{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.tp-go a,.tp-go button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:999px;font:inherit;font-size:14.5px;font-weight:900;text-decoration:none;cursor:pointer;text-align:center;}
+.tp-go a{background:linear-gradient(135deg,var(--blue),#3F6CC4);color:#fff!important;border:0;}
+.tp-go button,.stay-quick-driver{background:#FFF6DC;color:#7A5600;border:1.5px solid #E6C56E;}
+body.large-text .tp-go a,body.large-text .tp-go button{font-size:16px!important;}
+.stay-quick-driver{flex:none;min-height:30px;padding:0 12px;border-radius:999px;font:inherit;font-size:12px;font-weight:900;cursor:pointer;}
+/* 給司機看：全螢幕大字 */
+.driver-card{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,18,40,.72);}
+.driver-card-inner{width:min(440px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:26px 22px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.driver-ja{margin:0;font-size:25px;white-space:nowrap;font-weight:900;color:var(--blue);line-height:1.3;}
+.driver-zh{margin:4px 0 14px;font-size:15px;color:#5A6680;}
+.driver-name{font-size:36px;font-weight:900;line-height:1.25;color:#141A2A;word-break:break-word;margin-bottom:6px;}
+.driver-name.long{font-size:28px;}
+.driver-name-zh{font-size:15px;color:#5A6680;margin-bottom:14px;}
+.driver-addr,.driver-drop{text-align:left;margin:0 0 12px;padding:12px 14px;border-radius:14px;background:#EEF2FA;}
+.driver-addr small,.driver-drop small{display:block;font-size:12.5px;font-weight:800;color:#5A6680;margin-bottom:4px;}
+.driver-addr{font-size:19px;font-weight:800;color:#141A2A;line-height:1.5;}
+.driver-drop b{display:block;font-size:21px;line-height:1.5;color:#141A2A;}
+.driver-drop span{display:block;margin-top:6px;font-size:14.5px;line-height:1.6;color:#4A5570;}
+.driver-map,.driver-close,.driver-edit{display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;border-radius:16px;font:inherit;font-size:17px;font-weight:900;text-decoration:none;cursor:pointer;margin-bottom:10px;}
+.driver-map{background:linear-gradient(135deg,var(--blue),#3F6CC4);color:#fff!important;border:0;}
+.driver-edit{min-height:46px;font-size:15px;border:1.5px dashed #8E7CC3;background:#F8F6FE;color:#4B3A82;}
+body.mode-travel .driver-edit{display:none;}
+.driver-close{background:#E7ECF6;color:#27478C;border:0;margin-bottom:0;}
+/* 日期晶片與小字：標準字也至少 12px */
+.day-chip .m,.today-chip{font-size:12.5px!important;}
+.net-status .net-txt{font-size:12px!important;}
+/* 提示訊息沒有復原鈕時 */
+#undoToastButton[hidden]{display:none!important;}
+
+/* ===== hk11：今日雪況＋降雪提醒 ===== */
+.snow-banner{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:12px 14px;border-radius:16px;background:linear-gradient(135deg,#EEF4FF,#DCE7FA);border:1.5px solid #ABC2EC;color:#1F3A78;}
+.snow-banner svg{flex:none;margin-top:2px;}
+.snow-banner b{font-size:14.5px;}
+.snow-banner p{margin:4px 0 0;font-size:13.5px;line-height:1.6;}
+.snow-banner ul{margin:4px 0 0;padding-left:18px;font-size:13.5px;line-height:1.6;}
+.snow-banner li.heavy{color:#A12B2B;font-weight:800;}
+.snow-banner.heavy{background:linear-gradient(135deg,#FFF1EE,#FBDCD6);border-color:#E9A398;color:#7E1F1F;}
+.snow-banner.trip{background:linear-gradient(135deg,#F3F0FF,#E3DEFA);border-color:#BDB2EE;color:#3B2F7A;}
+.snow-banner.ok{background:#F2F7F3;border-color:#C5DCC9;color:#2F6A3D;}
+#daySnowSlot .snow-banner{margin:10px 0 0;}
+.snow-now-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.snow-city{min-width:0;padding:12px;border-radius:16px;background:#F7F9FE;border:1.5px solid #DCE5F6;}
+.snow-city.on{border-color:#8FAEE6;background:#EEF4FF;}
+.snow-city.heavy{border-color:#E9A398;background:#FFF4F1;}
+.snow-city-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:8px;}
+.snow-city-head strong{font-size:14.5px;color:var(--blue);line-height:1.3;}
+.snow-city-head span{font-size:13px;font-weight:800;color:#4A5570;white-space:nowrap;}
+.snow-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;text-align:center;}
+.snow-stats small{display:block;font-size:10.5px;color:#5A6680;line-height:1.25;min-height:2.5em;}
+.snow-stats b{font-size:19px;color:#141A2A;}
+.snow-stats i{font-style:normal;font-size:11px;margin-left:1px;color:#5A6680;}
+.snow-when{margin-top:8px;font-size:12.5px;font-weight:800;color:#2C4F9C;}
+.snow-city.heavy .snow-when{color:#A12B2B;}
+.snow-road{margin-top:8px;font-size:12.5px;line-height:1.55;color:#33405C;}
+.snow-road b{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:999px;background:#E3EAF8;color:#27478C;font-size:11.5px;}
+.snow-empty{font-size:13px;color:#5A6680;padding:6px 2px;}
+.day-chip.snowy{position:relative;}
+.day-chip.snowy::after{content:'❄';position:absolute;top:-6px;right:-4px;width:18px;height:18px;border-radius:50%;background:#fff;border:1.5px solid #ABC2EC;color:#3F6CC4;font-size:11px;line-height:15px;text-align:center;}
+.dw-snow2{margin-top:6px;font-size:12px;font-weight:800;color:#4A5570;}
+.dw-snow2.on{color:#2C4F9C;}
+@media (max-width:360px){.snow-now-list{grid-template-columns:1fr;}}
+body.large-text .snow-banner p,body.large-text .snow-banner ul,body.large-text .snow-road{font-size:16px!important;}
+body.large-text .snow-now-list{grid-template-columns:1fr;}
+body.large-text .snow-stats small{font-size:12.5px;}
+
+/* ===== hk11：編輯功能（評論多行編輯、自訂區域、副景點、改日期、多張附圖） ===== */
+.note-actions button{width:auto!important;height:auto!important;min-height:36px;padding:0 14px!important;border-radius:999px!important;font-size:13px!important;font-weight:800!important;background:#EEF3FB!important;color:var(--blue)!important;}
+.note-actions button:last-child{background:#FDE4DF!important;color:#B0412F!important;}
+.field-edit-actions button{width:auto!important;min-width:24px;padding:0 8px!important;border-radius:999px!important;}
+.eatshop-add{display:flex;flex-wrap:wrap;gap:8px;}
+.eatshop-add button:last-child{background:#fff!important;color:var(--blue)!important;border:1.5px solid #ABC2EC!important;}
+.area-ctl{margin-left:auto;display:inline-flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;}
+.area-ctl button{min-height:36px;border:0;border-radius:999px;background:#EEF3FB;color:var(--blue);font:inherit;font-size:12px;font-weight:800;padding:5px 12px;cursor:pointer;}
+.area-ctl button.del{background:#FDE4DF;color:#B0412F;}
+body.mode-travel .eatshop-group.empty-area{display:none;}
+.dp-empty{font-size:12.5px;color:var(--ink-soft);line-height:1.6;background:#fff;border-radius:12px;padding:12px;}
+.move-day-btn{background:#FFF6DC;color:#7A5600;border:none;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;}
+.moved-badge{background:#FFF6DC!important;color:#7A5600!important;}
+/* 副景點 */
+.subspots{margin:12px 0 4px;padding:12px;border-radius:16px;background:linear-gradient(160deg,#F3F6FD,#E7EDF9);border:1.5px solid #C9D6F0;}
+.subspots-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--blue);font-size:15px;}
+.subspots-head em{font-style:normal;font-size:12px;font-weight:800;background:var(--blue);color:#fff;border-radius:999px;padding:1px 9px;}
+.sub2{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:8px;border:1px solid #DCE5F6;}
+.sub2-main{min-width:0;flex:1;}
+.sub2-main b{font-size:16px;color:var(--ink);}
+.sub2-dur{margin-left:8px;font-size:12px;font-weight:700;color:var(--blue);background:#EEF3FB;border-radius:999px;padding:1px 9px;white-space:nowrap;}
+.sub2-main p{margin:6px 0 0;font-size:14px;line-height:1.6;color:#4A5570;white-space:pre-line;}
+.sub2-acts{display:flex;flex-direction:column;gap:6px;flex:none;align-items:stretch;}
+.sub2-nav{display:flex;align-items:center;justify-content:center;min-height:36px;padding:0 16px;border-radius:999px;background:linear-gradient(135deg,var(--blue),#3F6CC4);color:#fff!important;font-size:13px;font-weight:800;text-decoration:none;}
+.sub2-edit{display:flex;flex-direction:column;gap:6px;}
+.sub2-edit button{min-height:34px;border:0;border-radius:999px;background:#EEF3FB;color:var(--blue);font:inherit;font-size:12.5px;font-weight:800;padding:0 12px;cursor:pointer;}
+.sub2-edit button.del{background:#FDE4DF;color:#B0412F;}
+.subspots-add{width:100%;min-height:44px;border:1.5px dashed #8FAEE6;background:#F7F9FE;color:var(--blue);border-radius:14px;font:inherit;font-size:14px;font-weight:800;cursor:pointer;}
+/* 副景點照片、規範附圖（多張） */
+.sub2-phs,.rule-phs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+body.mode-travel .sub2-phs.no-img,body.mode-travel .rule-phs.no-img{display:none;}
+.sub2-ph,.rule-ph{position:relative;width:84px;height:84px;border-radius:12px;overflow:hidden;background:#eee;flex:none;}
+.sub2-ph img,.rule-ph img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;}
+.sub2-ph button,.rule-ph button{position:absolute;top:4px;right:4px;width:30px;height:30px;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:14px;font-weight:900;cursor:pointer;line-height:1;}
+.sub2-ph-add,.rule-ph-add{display:inline-flex;align-items:center;justify-content:center;min-width:84px;height:84px;padding:0 12px;border:1.5px dashed #8FAEE6;border-radius:12px;background:#F7F9FE;color:var(--blue);font-size:13px;font-weight:800;cursor:pointer;text-align:center;}
+.rule-ph-add{border-color:#C5C8D3;background:#fff;color:var(--ink-soft);}
+.sub2-phs.no-img .sub2-ph-add,.rule-phs.no-img .rule-ph-add{height:42px;border-radius:999px;}
+body.large-text .sub2-main p{font-size:15.5px!important;}

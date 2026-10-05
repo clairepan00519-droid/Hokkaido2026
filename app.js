@@ -78,6 +78,15 @@ function unlockFamilySite({offline=false}={}){
   if(gate){ gate.hidden=true; gate.setAttribute('aria-hidden','true'); }
   if(!offline) startFamilyCloud();
 }
+/* hk11：只看模式（登入過期／暫不同步）時的頂端提示 */
+function showReloginBanner(){
+  if(document.getElementById('reloginBanner'))return;
+  const el=document.createElement('div');el.id='reloginBanner';el.className='relogin-banner';
+  el.innerHTML='<span>需要重新登入，才能和家人同步。<br>行程都還在，可以照常看；這段時間的修改會先存在這支手機，登入後自動合併。</span><button type="button">重新登入</button>';
+  el.querySelector('button').onclick=()=>{const g=document.getElementById('familyGate');if(g){g.hidden=false;g.setAttribute('aria-hidden','false');}const ob=document.getElementById('offlineGateButton');if(ob){ob.hidden=false;ob.textContent='先不要，繼續看行程';ob.onclick=()=>{g.hidden=true;g.setAttribute('aria-hidden','true');};}setTimeout(()=>document.getElementById('familyGateEmail')?.focus(),80);};
+  document.querySelector('.app')?.prepend(el);
+}
+function hideReloginBanner(){document.getElementById('reloginBanner')?.remove();}
 function loginErrorText(e,status){
   const m=String(e&&e.message||e||'');
   if(/Invalid login credentials/i.test(m))return 'Email 或密碼不正確。請確認是在「這個」Supabase 專案的 Authentication → Users 建立的帳號，密碼大小寫也要一致。';
@@ -107,7 +116,7 @@ async function submitFamilyGate(){
     status=r.status;
     let data={}; try{data=await r.json();}catch(_){}
     if(!r.ok)throw new Error(data.error_description||data.msg||data.message||data.error||`HTTP ${r.status}`);
-    saveAuthSession(data);unlockFamilySite();input.value='';
+    saveAuthSession(data);hideReloginBanner();unlockFamilySite();input.value='';
   }catch(e){ if(err) err.textContent=loginErrorText(e,status); input.select(); }
   finally{ btn.disabled=false; btn.textContent=label; }
 }
@@ -118,7 +127,8 @@ async function initAuthGate(){
   const btn=document.getElementById('familyGateButton');
   const offlineBtn=document.getElementById('offlineGateButton');
   const trusted=localStorage.getItem(FAMILY_TRUSTED_DEVICE_KEY)==='1';
-  if(offlineBtn){offlineBtn.hidden=!(trusted&&!navigator.onLine);offlineBtn.onclick=()=>unlockFamilySite({offline:true});}
+  /* hk11：這支手機只要登入過，就一律提供「先看行程」，不會因為登入過期或網路怪怪的就整個打不開 */
+  if(offlineBtn){offlineBtn.hidden=!trusted;offlineBtn.onclick=()=>{unlockFamilySite({offline:true});if(navigator.onLine)showReloginBanner();};}
   if(btn) btn.addEventListener('click',submitFamilyGate);
   if(input) input.addEventListener('keydown',e=>{ if(e.key==='Enter') submitFamilyGate(); });
   if(familyAuthSession){
@@ -129,6 +139,8 @@ async function initAuthGate(){
       const netFail=e instanceof TypeError||/Failed to fetch|NetworkError|Load failed|network|timeout|Abort/i.test(msg);
       if(netFail&&trusted){unlockFamilySite({offline:true});return;}
       saveAuthSession(null);
+      /* 登入過期：行程資料都還在這支手機上，先讓人照常看行程，頂端提示「重新登入」即可同步 */
+      if(trusted){unlockFamilySite({offline:true});showReloginBanner();return;}
     }
   }
   setTimeout(()=>document.getElementById('familyGateEmail')?.focus(),80);
@@ -195,13 +207,14 @@ document.addEventListener('DOMContentLoaded',()=>{
    不依賴外部 Supabase SDK 或 Realtime WebSocket，避免 CDN／WebSocket
    在手機、公司或醫院網路被攔截。每 12 秒檢查一次家人更新。 */
 /* ▼▼▼ 新 Supabase 專案建立後，把下面兩行換成「Project Settings → API」裡的 URL 與 anon public key ▼▼▼ */
-const SUPABASE_URL = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_URL||"").trim().replace(/\/+$/,"");
+/* 只取 https://xxxx.supabase.co 這一段：就算貼成 …/rest/v1/ 或 …/auth/v1 也能正常登入 */
+const SUPABASE_URL = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_URL||"").trim().replace(/\/+$/,"").replace(/\/(rest|auth|storage)\/v1(\/.*)?$/i,"").replace(/\/+$/,"");
 const SUPABASE_ANON_KEY = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_ANON_KEY||"").trim();
 /* ▲▲▲ 兩行都留空時，網站以「單機預覽模式」運作：不需登入、資料只存在這台裝置 ▲▲▲ */
 const CLOUD_CONFIGURED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 const SYNC_META_KEY = 'hokkaido_sync_meta_v3';
-const SYNC_KEYS = ['hokkaido_notes','hokkaido_info_overrides','hokkaido_field_overrides','hokkaido_photos','hokkaido_covers','hokkaido_custom_spots','hokkaido_order','hokkaido_block_order','hokkaido_route_maps','hokkaido_transport_extras','hokkaido_foliage_maps','hokkaido_pack','hokkaido_shop','hokkaido_rules','hokkaido_docs','hokkaido_hidden_fixed_spots','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_photo_pos','hokkaido_marks','hokkaido_livelinks','hokkaido_mama','hokkaido_surprises','hokkaido_tips_seen','hokkaido_eat_area','hokkaido_eat_plan','hokkaido_detail_covers','hokkaido_hidden_orig','hokkaido_transport_custom'];
+const SYNC_KEYS = ['hokkaido_notes','hokkaido_info_overrides','hokkaido_field_overrides','hokkaido_photos','hokkaido_covers','hokkaido_custom_spots','hokkaido_order','hokkaido_block_order','hokkaido_route_maps','hokkaido_transport_extras','hokkaido_foliage_maps','hokkaido_pack','hokkaido_shop','hokkaido_rules','hokkaido_docs','hokkaido_hidden_fixed_spots','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_photo_pos','hokkaido_marks','hokkaido_livelinks','hokkaido_mama','hokkaido_surprises','hokkaido_tips_seen','hokkaido_eat_area','hokkaido_eat_plan','hokkaido_detail_covers','hokkaido_hidden_orig','hokkaido_transport_custom','hokkaido_eat_area_custom','hokkaido_sub_spots','hokkaido_spot_day','hokkaido_eat_area_order'];
 const MEDIA_SYNC_KEYS = new Set(['hokkaido_photos','hokkaido_covers','hokkaido_route_maps','hokkaido_transport_extras','hokkaido_foliage_maps']);
 const STRUCTURED_LIST_KEYS = new Set(['hokkaido_shop','hokkaido_rules','hokkaido_docs','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_livelinks','hokkaido_surprises']);
 const cloudSync = {enabled:false, starting:false, applyingRemote:false, pending:{}, timer:null, pollTimer:null, lastError:null, ready:false};
@@ -392,6 +405,8 @@ function normalizeStructuredList(key,value){
       item.id=item.id||stableItemId('shop',[item.cat,item.name,item.location]);
     }else if(key==='hokkaido_rules'){
       item.id=item.id||stableItemId('rule',[item.title,item.text]);
+      item.imgs=mergeUniqueUrls(item.imgs,item.img?[item.img]:[]);
+      item.img=null;
     }else if(key==='hokkaido_docs'){
       item.id=item.id||stableItemId('doc',[item.ic,item.t,item.s]);
     }
@@ -399,7 +414,9 @@ function normalizeStructuredList(key,value){
     const id=item.id||fallback;
     if(!map.has(id)){ map.set(id,item); return; }
     const prev=map.get(id);
-    if(key==='hokkaido_shop'){
+    if(key==='hokkaido_rules'){
+      map.set(id,{...prev,...item,imgs:mergeUniqueUrls(prev.imgs,item.imgs),img:null});
+    }else if(key==='hokkaido_shop'){
       map.set(id,{...prev,...item,imgs:mergeUniqueUrls(prev.imgs,item.imgs),qty:Math.max(Number(prev.qty)||1,Number(item.qty)||1),checked:Boolean(prev.checked||item.checked)});
     }else{
       map.set(id,{...prev,...item,img:item.img||prev.img||null});
@@ -552,8 +569,26 @@ function applyRemoteRow(row, forceApply=false){
   /* 用 >= 而非 >：自己剛推送出去、又被下一次輪詢讀回來的「回聲」時間戳會完全相同，
      不需要（也不應該）再觸發一次整區重繪。 */
   if(lt&&Date.parse(lt)>=Date.parse(rt))return;
+  let pushBack=null;
   cloudSync.applyingRemote=true;
-  try{let remote;try{remote=JSON.parse(row.value);}catch(e){remote=null;}const value=normalizeSyncValue(row.key,remote);const valueStr=JSON.stringify(value);replaceLocalJson(row.key,value);setSyncMeta(row.key,rt);setSyncBase(row.key,value);applyStoreUpdate(row.key,valueStr);}catch(e){console.error('套用家人資料失敗',e);}finally{cloudSync.applyingRemote=false;}
+  try{
+    let remote;try{remote=JSON.parse(row.value);}catch(e){remote=null;}
+    if(remote==null)return; /* 雲端內容壞掉／空白時，絕不拿來覆蓋本機資料 */
+    const remoteN=normalizeSyncValue(row.key,remote);
+    let value=remoteN;
+    /* hk11：本機若有「還沒同步上去」的變更（和上次同步完成時的內容不同），
+       先和雲端版本合併，再把合併結果送回雲端，而不是直接用雲端版本整包蓋掉。 */
+    const local=localValueForKey(row.key);
+    if(local!=null){
+      const localN=normalizeSyncValue(row.key,local),base=getSyncBase()[row.key];
+      if(!sameJSON(localN,base)&&!sameJSON(localN,remoteN)){
+        value=mergeForSync(row.key,localN,remoteN);
+        if(!sameJSON(value,remoteN))pushBack=value;
+      }
+    }
+    replaceLocalJson(row.key,value);setSyncMeta(row.key,rt);setSyncBase(row.key,remoteN);applyStoreUpdate(row.key,JSON.stringify(value));
+  }catch(e){console.error('套用家人資料失敗',e);pushBack=null;}finally{cloudSync.applyingRemote=false;}
+  if(pushBack)scheduleCloudPush(row.key,pushBack);
 }
 /* 若目前有任何未送出的編輯表單開著，先記下「稍後要重繪」，
    等表單關閉／送出後再統一補畫一次，避免蓋掉使用者還沒儲存的內容。 */
@@ -571,7 +606,7 @@ function flushPendingDayRender(){
 }
 function applyStoreUpdate(key,jsonStr){
   let parsed;try{parsed=JSON.parse(jsonStr);}catch(e){return;}
-  switch(key){case'hokkaido_notes':notesStore=parsed;break;case'hokkaido_info_overrides':infoOverrideStore=parsed||{};break;case'hokkaido_field_overrides':fieldOverrideStore=parsed||{};break;case'hokkaido_photos':photoStore=parsed;break;case'hokkaido_covers':coverStore=parsed;break;case'hokkaido_custom_spots':customSpotsStore=parsed;break;case'hokkaido_order':orderStore=parsed;break;case'hokkaido_block_order':blockOrderStore=parsed;break;case'hokkaido_route_maps':routeMapStore=parsed;break;case'hokkaido_transport_extras':transportExtrasStore=parsed||{};break;case'hokkaido_foliage_maps':foliageMapStore=Array.isArray(parsed)?parsed:[];renderFoliageMaps();return;case'hokkaido_pack':packData=migratePackCategoryNames(parsed);window._packLive=packData;if(isPackComposerEditing()){window._packRemoteRenderPending=true;}else{renderPackList();}return;case'hokkaido_shop':shopData=normalizeStructuredList('hokkaido_shop',parsed);renderShopList();return;case'hokkaido_rules':rulesData=normalizeStructuredList('hokkaido_rules',parsed);renderRulesList();return;case'hokkaido_docs':docsData=mergeDocsWithDefaults(parsed);persistDocs();renderDocsList();return;case'hokkaido_transport_cards':transportCardsData=normalizeStructuredList('hokkaido_transport_cards',parsed);renderTransportCards();return;case'hokkaido_eatshop':eatShopStore=normalizeStructuredList('hokkaido_eatshop',parsed);if(typeof activeDay==='string')renderDayContent();return;case'hokkaido_photo_pos':photoPosStore=parsed||{};safeRenderDayContent();return;case'hokkaido_marks':marksStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderMarksBar();safeRenderDayContent();return;case'hokkaido_livelinks':liveData=normalizeStructuredList('hokkaido_livelinks',parsed);renderLive();return;case'hokkaido_surprises':surprisesData=normalizeStructuredList('hokkaido_surprises',parsed);renderSurpriseAdmin();return;case'hokkaido_tips_seen':tipsSeen=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};return;case'hokkaido_transport_custom':transportCustomStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_detail_covers':detailCoverStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_hidden_orig':hiddenOrigStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_plan':eatPlanStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area':eatAreaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};if(typeof activeDay==='string')safeRenderDayContent();return;case'hokkaido_mama':mamaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};refreshMamaButtons(null);if(document.getElementById('mamaModal'))renderMamaList();return;case'hokkaido_hidden_fixed_spots':hiddenFixedSpotsStore=parsed||{};safeRenderDayContent();if(typeof updateSpotCount==='function')updateSpotCount();return;default:return;}
+  switch(key){case'hokkaido_notes':notesStore=parsed;break;case'hokkaido_info_overrides':infoOverrideStore=parsed||{};break;case'hokkaido_field_overrides':fieldOverrideStore=parsed||{};break;case'hokkaido_photos':photoStore=parsed;break;case'hokkaido_covers':coverStore=parsed;break;case'hokkaido_custom_spots':customSpotsStore=parsed;break;case'hokkaido_order':orderStore=parsed;break;case'hokkaido_block_order':blockOrderStore=parsed;break;case'hokkaido_route_maps':routeMapStore=parsed;break;case'hokkaido_transport_extras':transportExtrasStore=parsed||{};break;case'hokkaido_foliage_maps':foliageMapStore=Array.isArray(parsed)?parsed:[];renderFoliageMaps();return;case'hokkaido_pack':packData=migratePackCategoryNames(parsed);window._packLive=packData;if(isPackComposerEditing()){window._packRemoteRenderPending=true;}else{renderPackList();}return;case'hokkaido_shop':shopData=normalizeStructuredList('hokkaido_shop',parsed);renderShopList();return;case'hokkaido_rules':rulesData=normalizeStructuredList('hokkaido_rules',parsed);renderRulesList();return;case'hokkaido_docs':docsData=mergeDocsWithDefaults(parsed);persistDocs();renderDocsList();return;case'hokkaido_transport_cards':transportCardsData=normalizeStructuredList('hokkaido_transport_cards',parsed);renderTransportCards();return;case'hokkaido_eatshop':eatShopStore=normalizeStructuredList('hokkaido_eatshop',parsed);if(typeof activeDay==='string')renderDayContent();return;case'hokkaido_photo_pos':photoPosStore=parsed||{};safeRenderDayContent();return;case'hokkaido_marks':marksStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderMarksBar();safeRenderDayContent();return;case'hokkaido_livelinks':liveData=normalizeStructuredList('hokkaido_livelinks',parsed);renderLive();return;case'hokkaido_surprises':surprisesData=normalizeStructuredList('hokkaido_surprises',parsed);renderSurpriseAdmin();return;case'hokkaido_tips_seen':tipsSeen=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};return;case'hokkaido_transport_custom':transportCustomStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_detail_covers':detailCoverStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_hidden_orig':hiddenOrigStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_plan':eatPlanStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area':eatAreaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};if(typeof activeDay==='string')safeRenderDayContent();return;case'hokkaido_mama':mamaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};refreshMamaButtons(null);if(document.getElementById('mamaModal'))renderMamaList();return;case'hokkaido_hidden_fixed_spots':hiddenFixedSpotsStore=parsed||{};safeRenderDayContent();if(typeof updateSpotCount==='function')updateSpotCount();return;case'hokkaido_sub_spots':subSpotStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area_custom':eatAreaCustom=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;case'hokkaido_spot_day':spotDayStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderDayChips();safeRenderDayContent();return;case'hokkaido_eat_area_order':eatAreaOrder=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;default:return;}
   safeRenderDayContent();if(typeof updateSpotCount==='function')updateSpotCount();
 }
 function scheduleCloudPush(key,valueObj){
@@ -585,21 +620,25 @@ function scheduleCloudPush(key,valueObj){
   clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,700);updateSyncStatus(null,'saving');
 }
 async function flushCloudPush(){
+  if(cloudSync.flushing){clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,800);return;}
   const entries=Object.entries(cloudSync.pending);cloudSync.pending={};
-  for(const[key,localSnapshot]of entries){
+  if(!entries.length)return;
+  cloudSync.flushing=true;
+  try{
+  for(let ei=0;ei<entries.length;ei++){const[key,localSnapshot]=entries[ei];
     try{
       /* 推送前先讀一次雲端目前的版本，和這台裝置要送出的內容做合併（聯集），
          而不是直接整包覆蓋過去。這樣就算家人在你按下儲存前的一兩秒內，
          剛好也改了同一分類裡的「不同項目」，兩邊的變更都會保留，
          不會有一邊的資料在同步後憑空消失。 */
       let mergedValue=localSnapshot;
-      try{
-        const remoteRow=await restGetRow(key);
-        if(remoteRow){
-          let remoteValue=null; try{remoteValue=JSON.parse(remoteRow.value);}catch(e){}
-          if(remoteValue!=null) mergedValue=mergeForSync(key,localSnapshot,remoteValue);
-        }
-      }catch(e){ /* 讀不到雲端目前版本就先用本機版本推送，不讓整個同步卡住 */ }
+      /* hk11：讀不到雲端目前版本時不再「直接用本機版本蓋過去」（那樣可能把家人剛加的資料蓋掉），
+         改成整批保留、稍後自動重試。 */
+      const remoteRow=await restGetRow(key);
+      if(remoteRow){
+        let remoteValue=null; try{remoteValue=JSON.parse(remoteRow.value);}catch(e){}
+        if(remoteValue!=null) mergedValue=mergeForSync(key,localSnapshot,remoteValue);
+      }
       const serverTime=await restUpsert(key,mergedValue);
       if(JSON.stringify(mergedValue)!==JSON.stringify(localSnapshot)){
         /* 合併後比本機原本的內容多了家人那邊的東西，寫回本機讓這台裝置也看得到 */
@@ -609,10 +648,25 @@ async function flushCloudPush(){
       }
       setSyncMeta(key,serverTime);setSyncBase(key,mergedValue);
       cloudSync.lastError=null;
-    }catch(e){cloudSync.lastError=e;console.error('同步寫入失敗',e);updateSyncStatus(e);return;}
+    }catch(e){
+      cloudSync.lastError=e;console.error('同步寫入失敗',e);updateSyncStatus(e);
+      /* hk11：寫入失敗（離線、網路不穩、登入過期）時，把這一筆與後面還沒送出的全部放回待送清單，
+         之後自動重試；期間背景輪詢不會用雲端舊資料蓋掉這些尚未送出的變更。 */
+      entries.slice(ei).forEach(([k,v])=>{if(!Object.prototype.hasOwnProperty.call(cloudSync.pending,k))cloudSync.pending[k]=v;});
+      cloudSync.retryDelay=Math.min((cloudSync.retryDelay||2500)*2,60000);
+      clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,cloudSync.retryDelay);
+      return;
+    }
   }
+  }finally{cloudSync.flushing=false;}
+  cloudSync.retryDelay=0;
   cloudSync.lastOk=Date.now();updateSyncStatus();setTimeout(pollCloudChanges,500);
 }
+function hasPendingCloudPush(){return Object.keys(cloudSync.pending||{}).length>0;}
+/* 切到背景、關閉 App 或恢復網路時，馬上把還沒送出的變更送出去 */
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&cloudSync.enabled&&hasPendingCloudPush()){clearTimeout(cloudSync.timer);flushCloudPush();}});
+window.addEventListener('pagehide',()=>{if(cloudSync.enabled&&hasPendingCloudPush()){clearTimeout(cloudSync.timer);flushCloudPush();}});
+window.addEventListener('online',()=>{if(cloudSync.enabled&&hasPendingCloudPush()){cloudSync.retryDelay=0;clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,800);}});
 function updateSyncStatus(err,state){
   const el=document.getElementById('cloudSyncStatus');if(!el)return;el.style.display='inline-flex';el.classList.toggle('sync-error',!!err);el.classList.toggle('sync-saving',state==='saving'||state==='connecting');
   if(err){el.textContent='⚠️ '+friendlySyncError(err);el.title=String(err&&err.message||err);}
@@ -809,9 +863,12 @@ function offerUndo(message,restore){
   const toast=document.getElementById('undoToast'),text=document.getElementById('undoToastText'),btn=document.getElementById('undoToastButton');
   if(!toast||!text||!btn)return;
   clearTimeout(undoTimer);text.textContent=message;toast.hidden=false;
-  btn.onclick=()=>{clearTimeout(undoTimer);toast.hidden=true;restore();};
-  undoTimer=setTimeout(()=>{toast.hidden=true;},5000);
+  /* 沒有東西可以復原的「提示訊息」不顯示復原鈕；可復原的給 8 秒，長輩來得及按 */
+  btn.hidden=typeof restore!=='function';
+  btn.onclick=()=>{clearTimeout(undoTimer);toast.hidden=true;if(typeof restore==='function')restore();};
+  undoTimer=setTimeout(()=>{toast.hidden=true;},typeof restore==='function'?8000:3500);
 }
+function showToast(message){offerUndo(message,null);}
 function escHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 const NOTE_DRAFT_KEY='hokkaido_note_drafts_v1';
@@ -933,16 +990,7 @@ function resetSpotEditModal(){
 }
 
 window._spotCustomInfoOriginals = window._spotCustomInfoOriginals || {};
-function editBuiltInInfo(key){
-  const fallback = window._spotCustomInfoOriginals[key] || null;
-  const current=currentBuiltInInfo(key,fallback);
-  const next=prompt('編輯這筆評論與資訊', current==null?'':current);
-  if(next===null)return;
-  const value=next.trim();
-  infoOverrideStore[key]=value||null;
-  persistInfoOverrides(); renderDayContent();
-  setTimeout(()=>document.getElementById('spot-card-'+key)?.classList.add('open'),50);
-}
+/* editBuiltInInfo：hk11 改成大的多行編輯視窗（見檔案後段） */
 function deleteBuiltInInfo(key){
   if(!confirm('要刪除這筆預設評論與資訊嗎？'))return;
   infoOverrideStore[key]=null; persistInfoOverrides(); renderDayContent();
@@ -975,17 +1023,7 @@ function deleteNote(key, noteIdx) {
     const card = document.getElementById('spot-card-'+key); if(card) card.classList.add('open');
   }, 50);
 }
-function editNote(key, noteIdx) {
-  if(!notesStore[key] || typeof notesStore[key][noteIdx] === 'undefined') return;
-  const next = prompt('編輯評論與資訊', notesStore[key][noteIdx]);
-  if(next === null) return;
-  const text = next.trim();
-  if(!text) return;
-  notesStore[key][noteIdx] = text;
-  persistNotes();
-  renderDayContent();
-  setTimeout(()=>{ const card=document.getElementById('spot-card-'+key); if(card) card.classList.add('open'); },50);
-}
+/* editNote：hk11 改成大的多行編輯視窗（見檔案後段） */
 function toggleEditNote(event, key) {
   event.stopPropagation();
   const editArea = document.getElementById('edit-note-'+key);
@@ -1115,11 +1153,15 @@ async function addCustomSpot(dayIdx){
 }
 function delCustomSpot(dayIdx, i){
   if(!customSpotsStore[dayIdx]) return;
-  const removed=customSpotsStore[dayIdx].splice(i,1)[0];
+  /* hk11：不再把它從清單「切掉」，只標記為已刪除。
+     自訂景點的筆記、照片、評論都是用「第幾個」對應的；以前切掉後面的景點會往前補位，
+     導致下一個景點接收到被刪景點的筆記照片（自己的反而不見）。標記刪除就不會錯位，也能完整復原。 */
+  const cur=customSpotsStore[dayIdx][i];if(!cur||cur.deleted)return;
+  customSpotsStore[dayIdx][i]={...cur,deleted:true};
   persistCustomSpots();
   renderDayContent();
   updateSpotCount();
-  offerUndo('已刪除自訂景點',()=>{if(!customSpotsStore[dayIdx])customSpotsStore[dayIdx]=[];customSpotsStore[dayIdx].splice(i,0,removed);persistCustomSpots();renderDayContent();updateSpotCount();});
+  offerUndo('已刪除自訂景點',()=>{const a=customSpotsStore[dayIdx];if(!a||!a[i])return;const r={...a[i]};delete r.deleted;a[i]=r;persistCustomSpots();renderDayContent();updateSpotCount();});
 }
 function toggleEditSpot(idx){
   const el = document.getElementById('spot-edit-'+idx);
@@ -1141,7 +1183,7 @@ function saveSpotEdit(dayIdx, i, idx){
 }
 function updateSpotCount(){
   let total = days.reduce((a,d)=>a+d.spots.length + (d.moreSpots?d.moreSpots.length:0),0);
-  Object.values(customSpotsStore).forEach(arr => total += arr.length);
+  Object.values(customSpotsStore).forEach(arr => total += (Array.isArray(arr)?arr.filter(x=>x&&!x.deleted).length:0));
   document.getElementById('spotCount').textContent = total;
 }
 
@@ -1302,7 +1344,20 @@ function tripTodayIndex(now=new Date()){
   if(y!==2027)return -1;
   return days.findIndex(x=>{const [mm,dd]=x.date.split('/').map(Number);return mm===m&&dd===d;});
 }
-function goToToday(){const i=tripTodayIndex();setActiveDay(i>=0?i:0);}
+function goToToday(){
+  const i=tripTodayIndex();setActiveDay(i>=0?i:0);
+  if(i<0){const now=new Date();showToast(now<new Date(2027,1,4)?'旅程還沒開始，先顯示第 1 天（2/4）':'旅程已結束，顯示第 1 天');}
+}
+/* 旅途中 App 放在背景過夜，隔天打開時自動切到「今天」（使用者正在看別天時不打擾，只在停在昨天時切換） */
+let _lastSeenDate=new Date().toDateString();
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible')return;
+  const nowStr=new Date().toDateString();if(nowStr===_lastSeenDate)return;
+  _lastSeenDate=nowStr;
+  const t=tripTodayIndex();if(t<0)return;
+  if(typeof activeDay==='number'&&activeDay===t-1&&!document.getElementById('formModal')){setActiveDay(t);showToast(`早安！已切到今天：D${days[t].dayNum}・${days[t].date}`);}
+  else renderDayChips();
+});
 
 function renderDayChips(){
   const today=tripTodayIndex();
@@ -1310,7 +1365,7 @@ function renderDayChips(){
     +`<div class="day-chip special-chip ${activeDay==='eat'?'active':''}" onclick="setActiveDay('eat')"><div class="d"><img class="chip-ic" src="images/nav-food.webp" alt=""></div><div class="m">吃·北海道</div></div>`
     +`<div class="day-chip special-chip ${activeDay==='shop'?'active':''}" onclick="setActiveDay('shop')"><div class="d"><img class="chip-ic" src="images/nav-shopping.webp" alt=""></div><div class="m">逛·北海道</div></div>`
     +days.map((d,i)=>`
-    <div class="day-chip ${i===activeDay?'active':''} ${i===today?'is-today':''}" data-i="${i}" onclick="setActiveDay(${i})">
+    <div class="day-chip ${i===activeDay?'active':''} ${i===today?'is-today':''}${daySnowy(i)?' snowy':''}" data-i="${i}"${daySnowy(i)?' title="預報大雪或強風"':''} onclick="setActiveDay(${i})">
       <div class="d">${d.date}</div>
       <div class="m">週${d.weekday}</div>
     </div>`).join('');
@@ -1323,7 +1378,7 @@ let activeSubTabStore = {}; /* dayIdx -> 'main' | 'transport' | 'more' | 'routem
 function transportPlanHTML(dayIdx){
   const plan=transportPlans[dayIdx];
   if(!plan)return `<section class="transport-plan"><div class="tp-head"><div><small>D${days[dayIdx].dayNum}・${days[dayIdx].date}</small><strong>今日交通</strong></div><img src="images/art-route.webp" alt="" width="56" height="56"></div>${customTransportHTML(dayIdx)}${transportAddBarHTML(dayIdx)}</section>`;
-  const routes=(rows,prefix='route')=>`<div class="transport-steps">${(rows||[]).map((r0,i)=>{const segmentKey=`${prefix}-${i}`;const sk=`tp${dayIdx}-${segmentKey}`;if(currentFieldValue(sk,'hidden',null)==='1')return '';const r={from:currentFieldValue(sk,'from',r0.from)||r0.from,to:currentFieldValue(sk,'to',r0.to)||r0.to,mode:currentFieldValue(sk,'mode',r0.mode)||r0.mode,time:currentFieldValue(sk,'time',r0.time)||r0.time,note:currentFieldValue(sk,'note',r0.note)||r0.note};window._tpOrig=window._tpOrig||{};window._tpOrig[sk]=r0;return `<div class="transport-step"><span class="transport-step-no">${i+1}</span><div class="transport-step-main"><div class="transport-points"><strong>${escHtml(r.from)}</strong><span>→</span><strong>${escHtml(r.to)}</strong></div><div class="transport-meta"><b>${escHtml(r.mode)}</b><span>⏱ ${escHtml(r.time)}</span></div><small>${escHtml(r.note)}</small><div class="edit-only tp-step-actions"><button type="button" onclick="editTransportStep('${sk}')">✎ 修改</button><button type="button" onclick="deleteTransportStep('${sk}')">🗑 刪除</button></div>${transportSegmentExtrasHTML(dayIdx,segmentKey)}</div></div>`;}).join('')}</div>`;
+  const routes=(rows,prefix='route')=>`<div class="transport-steps">${(rows||[]).map((r0,i)=>{const segmentKey=`${prefix}-${i}`;const sk=`tp${dayIdx}-${segmentKey}`;if(currentFieldValue(sk,'hidden',null)==='1')return '';const r={from:currentFieldValue(sk,'from',r0.from)||r0.from,to:currentFieldValue(sk,'to',r0.to)||r0.to,mode:currentFieldValue(sk,'mode',r0.mode)||r0.mode,time:currentFieldValue(sk,'time',r0.time)||r0.time,note:currentFieldValue(sk,'note',r0.note)||r0.note};window._tpOrig=window._tpOrig||{};window._tpOrig[sk]=r0;return `<div class="transport-step"><span class="transport-step-no">${i+1}</span><div class="transport-step-main"><div class="transport-points"><strong>${escHtml(r.from)}</strong><span>→</span><strong>${escHtml(r.to)}</strong></div><div class="transport-meta"><b>${escHtml(r.mode)}</b><span>⏱ ${escHtml(r.time)}</span></div><small>${escHtml(r.note)}</small>${tpGoButtonsHTML(dayIdx,r,i===(rows||[]).length-1)}<div class="edit-only tp-step-actions"><button type="button" onclick="editTransportStep('${sk}')">✎ 修改</button><button type="button" onclick="deleteTransportStep('${sk}')">🗑 刪除</button></div>${transportSegmentExtrasHTML(dayIdx,segmentKey)}</div></div>`;}).join('')}</div>`;
   const body=plan.choices?`<div class="transport-choice-list">${plan.choices.map((choice,i)=>`<details class="transport-choice"${i===0?' open':''}><summary>${escHtml(choice.name)}<span>展開路線</span></summary>${routes(choice.routes,`choice-${i}`)}</details>`).join('')}</div>`:plan.drive?`<div class="transport-drive-card"><span>🚗</span><div><strong>今天全程自駕</strong><small>按下方按鈕開啟當日主要地點導航；停車、休息站與道路狀況以當日為準。</small>${transportSegmentExtrasHTML(dayIdx,'drive-0')}</div></div>`:routes(plan.routes);
   return `<section class="transport-plan"><div class="tp-head"><div><small>D${days[dayIdx].dayNum}・${days[dayIdx].date}</small><strong>今日交通</strong></div><img src="images/art-route.webp" alt="" width="56" height="56"></div><div class="transport-alert">⚠️ ${escHtml(plan.alert)}</div>${body}${customTransportHTML(dayIdx)}${legacyTransportExtrasHTML(dayIdx)}${transportAddBarHTML(dayIdx)}<div class="transport-actions"><a href="https://www.google.com/maps/dir/?api=1&travelmode=${plan.drive?'driving':'transit'}&destination=${encodeURIComponent(currentFieldValue('day'+dayIdx+'-nav','mapQuery',null)||(days[dayIdx].region+' Japan'))}" target="_blank" rel="noopener">📍 開啟今日導航</a><button type="button" class="edit-only tp-nav-fix" onclick="editSpotField(event,'day${dayIdx}-nav','mapQuery','今日導航目的地（地址、經緯度或關鍵字）')">修正導航</button><button type="button" class="edit-only tp-nav-fix" onclick="restoreTransportSteps(${dayIdx})">↺ 還原本日交通步驟</button></div></section>`;
 }
@@ -1339,10 +1394,12 @@ function setActiveDay(i) {
 /* 全站搜尋：包含 10 天內建景點、自訂景點、餐廳、購物與住宿。 */
 function allSearchableSpots(){
   const out=[];
-  days.forEach((day,dayIdx)=>{
-    const hidden=new Set(hiddenFixedSpotsStore[dayIdx]||[]);
+  days.forEach((day,day0Idx)=>{
+    const dayIdx=day0Idx;
     const add=(spot,key)=>{
-      if(hidden.has(key))return;
+      const dayIdx=(typeof spotDayOf==='function'?spotDayOf(key):null)??day0Idx;
+      const day=days[dayIdx];
+      if((hiddenFixedSpotsStore[dayIdx]||[]).includes(key))return;
       const name=currentFieldValue(key,'name',spot.name)||spot.name;
       const desc=currentFieldValue(key,'desc',spot.desc)||spot.desc||'';
       const full=currentFieldValue(key,'fullDesc',spot.fullDesc)||spot.fullDesc||'';
@@ -1352,7 +1409,7 @@ function allSearchableSpots(){
     };
     (day.spots||[]).forEach((spot,i)=>add(spot,`d${dayIdx}-m${i}`));
     (day.moreSpots||[]).forEach((spot,i)=>add(spot,`d${dayIdx}-s${i}`));
-    (customSpotsStore[dayIdx]||[]).forEach((spot,i)=>add(spot,`d${dayIdx}-c${i}`));
+    (customSpotsStore[dayIdx]||[]).forEach((spot,i)=>{if(!spot.deleted)add(spot,`d${dayIdx}-c${i}`);});
     const plan=transportPlans[dayIdx];
     if(plan){
       const routeText=[...(plan.routes||[]),...(plan.choices||[]).flatMap(c=>c.routes||[])].map(r=>[r.from,r.to,r.mode,r.time,r.note].join(' ')).join(' ');
@@ -1441,14 +1498,14 @@ function spotCardHTML(spot, key, isMainSpot, customMeta, orderInfo, fixedMeta){
   const navQuery = currentFieldValue(idx, 'mapQuery', null) || spot.mapQuery || displayName;
   const safeName=escHtml(displayName),safeDesc=escHtml(displayDesc),safeFullDesc=escHtml(displayFullDesc);
   const durVal = currentFieldValue(idx, 'dur', spot.dur);
-  if(durVal) infoBits.push(`<div class="info-item"><div class="k field-k-row">建議停留<span class="field-edit-actions"><button onclick="event.stopPropagation(); editSpotField(event,'${idx}','dur','建議停留時間')" title="編輯">✎</button><button onclick="event.stopPropagation(); clearSpotField(event,'${idx}','dur')" title="清空">✕</button></span></div><div class="v">${escHtml(durVal)}</div></div>`);
+  if(durVal) infoBits.push(`<div class="info-item"><div class="k field-k-row">建議停留<span class="field-edit-actions"><button onclick="event.stopPropagation(); editSpotField(event,'${idx}','dur','建議停留時間')" title="編輯">編輯</button><button onclick="event.stopPropagation(); clearSpotField(event,'${idx}','dur')" title="清空">✕</button></span></div><div class="v">${escHtml(durVal)}</div></div>`);
   else infoBits.push(`<div class="info-item is-empty"><div class="k">建議停留</div><div class="v"><button class="field-add-btn" onclick="event.stopPropagation(); editSpotField(event,'${idx}','dur','建議停留時間')">＋ 新增</button></div></div>`);
   if(spot.cat==='hotel') infoBits.unshift(hotelAmenityBlock(idx));
   const hoursVal = currentFieldValue(idx, 'hours', spot.hours);
-  if(hoursVal) infoBits.push(`<div class="info-item"><div class="k field-k-row">營業／開放時間<span class="field-edit-actions"><button onclick="event.stopPropagation(); editSpotField(event,'${idx}','hours','營業／開放時間')" title="編輯">✎</button><button onclick="event.stopPropagation(); clearSpotField(event,'${idx}','hours')" title="清空">✕</button></span></div><div class="v info-hours">${escHtml(hoursVal)}</div></div>`);
+  if(hoursVal) infoBits.push(`<div class="info-item"><div class="k field-k-row">營業／開放時間<span class="field-edit-actions"><button onclick="event.stopPropagation(); editSpotField(event,'${idx}','hours','營業／開放時間')" title="編輯">編輯</button><button onclick="event.stopPropagation(); clearSpotField(event,'${idx}','hours')" title="清空">✕</button></span></div><div class="v info-hours">${escHtml(hoursVal)}</div></div>`);
   else infoBits.push(`<div class="info-item is-empty"><div class="k">營業／開放時間</div><div class="v"><button class="field-add-btn" onclick="event.stopPropagation(); editSpotField(event,'${idx}','hours','營業／開放時間')">＋ 新增</button></div></div>`);
   const noteVal = currentFieldValue(idx, 'note', spot.note);
-  if(noteVal) infoBits.push(`<div class="info-item full-w important-info"><div class="k field-k-row">重要提點／門票<span class="field-edit-actions"><button onclick="event.stopPropagation(); editSpotField(event,'${idx}','note','重要提點／門票')" title="編輯">✎</button><button onclick="event.stopPropagation(); clearSpotField(event,'${idx}','note')" title="清空">✕</button></span></div><div class="v">${brText(noteVal)}</div></div>`);
+  if(noteVal) infoBits.push(`<div class="info-item full-w important-info"><div class="k field-k-row">重要提點／門票<span class="field-edit-actions"><button onclick="event.stopPropagation(); editSpotField(event,'${idx}','note','重要提點／門票')" title="編輯">編輯</button><button onclick="event.stopPropagation(); clearSpotField(event,'${idx}','note')" title="清空">✕</button></span></div><div class="v">${brText(noteVal)}</div></div>`);
   else infoBits.push(`<div class="info-item full-w is-empty"><div class="k">重要提點／門票</div><div class="v"><button class="field-add-btn" onclick="event.stopPropagation(); editSpotField(event,'${idx}','note','重要提點／門票')">＋ 新增</button></div></div>`);
   
   const userPhotos = photoStore[idx] || [];
@@ -1460,11 +1517,11 @@ function spotCardHTML(spot, key, isMainSpot, customMeta, orderInfo, fixedMeta){
 
   /* 使用者新增的資訊：可新增多筆，各自獨立刪除，不會互相覆蓋 */
   let userNotes = notesStore[idx] || [];
-  let notesListHTML = userNotes.length ? userNotes.map((n,ni)=>`<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-top:6px; padding-top:6px; border-top:1px dashed rgba(0,0,0,0.12);"><span style="flex:1; white-space:pre-line;">${escHtml(n)}</span><span class="note-actions"><button onclick="event.stopPropagation(); editNote('${idx}', ${ni})" title="編輯">✎</button><button onclick="event.stopPropagation(); deleteNote('${idx}', ${ni})" title="刪除">✕</button></span></div>`).join('') : '';
+  let notesListHTML = userNotes.length ? userNotes.map((n,ni)=>`<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-top:6px; padding-top:6px; border-top:1px dashed rgba(0,0,0,0.12);"><span style="flex:1; white-space:pre-line;">${escHtml(n)}</span><span class="note-actions"><button onclick="event.stopPropagation(); editNote('${idx}', ${ni})" title="編輯">編輯</button><button onclick="event.stopPropagation(); deleteNote('${idx}', ${ni})" title="刪除">刪除</button></span></div>`).join('') : '';
   const builtInInfo = currentBuiltInInfo(idx, spot.customInfo || null);
   window._spotCustomInfoOriginals[idx] = spot.customInfo || null;
   let displayInfo = '';
-  if (builtInInfo) displayInfo += `<div class="built-in-info-row"><span class="built-in-info-text">${brText(builtInInfo)}</span><span class="note-actions built-in-actions"><button onclick="event.stopPropagation(); editBuiltInInfo('${idx}')" title="編輯這筆">✎</button><button onclick="event.stopPropagation(); deleteBuiltInInfo('${idx}')" title="刪除這筆">✕</button></span></div>`;
+  if (builtInInfo) displayInfo += `<div class="built-in-info-row"><span class="built-in-info-text">${brText(builtInInfo)}</span><span class="note-actions built-in-actions"><button onclick="event.stopPropagation(); editBuiltInInfo('${idx}')" title="編輯這筆">編輯</button><button onclick="event.stopPropagation(); deleteBuiltInInfo('${idx}')" title="刪除這筆">刪除</button></span></div>`;
   if (notesListHTML) displayInfo += `<div class="user-info-list" style="margin-top:${builtInInfo ? '8px' : '0'};"><span class="user-info-label">✏️ 您新增的資訊：</span>${notesListHTML}</div>`;
 
   let customInfoBox = '';
@@ -1511,7 +1568,10 @@ function spotCardHTML(spot, key, isMainSpot, customMeta, orderInfo, fixedMeta){
   const delBtn = customMeta ? `<button onclick="event.stopPropagation(); delCustomSpot(${customMeta.dayIdx}, ${customMeta.i})" style="background:#F0F4FB; color:#3B559D; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">🗑️ 刪除此景點</button>` : '';
   const editBtn = customMeta ? `<button onclick="event.stopPropagation(); toggleEditSpot('${idx}')" style="background:#EEF2FB; color:var(--blue); border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">✏️ 編輯簡介</button>` : '';
   const editInfoBtn = `<button onclick="event.stopPropagation(); openSpotEditModal(event,'${idx}')" style="background:#F9F6F9; color:#3B559D; border:none; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; white-space:nowrap;">✎ 編輯景點資訊</button>`;
-  const customBar = `<div class="spot-management-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px; flex-wrap:wrap;"><span style="display:flex; gap:6px; flex-wrap:wrap;">${customMeta ? `<span class="badge" style="background:#EEF2FB; color:var(--blue);">${genLabel}</span>` : ''}</span><span style="display:flex; gap:6px; flex-wrap:wrap;">${orderBtns}${editInfoBtn}${editBtn}${delBtn}${fixedDelBtn}</span></div>`;
+  const canMoveDay = !(fixedMeta&&fixedMeta.planned) && spot.cat!=='hotel' && typeof naturalDayOf==='function' && naturalDayOf(idx)!=null && !(typeof isMasterKey==='function'&&isMasterKey(idx));
+  const moveDayBtn = canMoveDay ? `<button class="move-day-btn" onclick="event.stopPropagation(); openSpotDayModal('${idx}')">📅 改日期</button>` : '';
+  const movedBadge = (canMoveDay && isSpotMoved(idx)) ? `<span class="badge moved-badge">原本 D${days[naturalDayOf(idx)].dayNum}・${days[naturalDayOf(idx)].date}</span>` : '';
+  const customBar = `<div class="spot-management-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px; flex-wrap:wrap;"><span style="display:flex; gap:6px; flex-wrap:wrap;">${movedBadge}${customMeta ? `<span class="badge" style="background:#EEF2FB; color:var(--blue);">${genLabel}</span>` : ''}</span><span style="display:flex; gap:6px; flex-wrap:wrap;">${orderBtns}${moveDayBtn}${editInfoBtn}${editBtn}${delBtn}${fixedDelBtn}</span></div>`;
   const editSpotAreaHTML = customMeta ? `<div id="spot-edit-${idx}" style="display:none; margin-bottom:10px; background:#F7F9FC; border:1px dashed #C7D6EA; border-radius:8px; padding:10px;" onclick="event.stopPropagation()">
       <div style="font-size:11px; font-weight:700; color:var(--ink-soft); margin-bottom:4px;">簡短介紹（列表中顯示）</div>
       <textarea id="spot-edit-short-${idx}" style="width:100%; border:1px solid var(--line); border-radius:6px; padding:6px; font-size:12px; font-family:inherit; resize:vertical; min-height:40px; outline:none; margin-bottom:8px; box-sizing:border-box;">${(spot.desc||'').replace(/</g,'&lt;')}</textarea>
@@ -1524,10 +1584,10 @@ function spotCardHTML(spot, key, isMainSpot, customMeta, orderInfo, fixedMeta){
     </div>` : '';
 
   if (!isMainSpot) {
-    return `<div class="sub-spot-card sub-spot-${spot.cat || 'other'}" id="spot-card-${idx}"><div class="sub-spot-header${coverUrl?' has-thumb':''}" onclick="toggleSpotDetails('${idx}')">${coverUrl?`<div class="gh-thumb sm">${coverImgHTML('guide-cover-img',coverUrl)}</div>`:''}<div class="sub-spot-header-content"><h4>${safeName} ${statusChipHTML(idx)}</h4><p class="short-desc">${safeDesc}</p>${miniStripHTML}</div>${favBtnHTML(idx,"inline")}<div class="chevron">▼</div></div><div class="sub-spot-details-wrap"><div class="sub-spot-details" onclick="event.stopPropagation()">${photoViewerHTML(idx,spot)}${customBar}${editSpotAreaHTML}<p class="full-desc">${safeFullDesc}</p>${marksBoxHTML(idx)}${spot.recDishes ? `<div class="dish-tag">🍲 必點推薦：${escHtml(spot.recDishes)}</div>` : ''}${reorderableBlocksHTML}<div class="action-row" style="margin-top:10px;"><a class="btn btn-map" href="${escAttr(mapsLink(navQuery))}" target="_blank" rel="noopener">導航</a><button class="btn btn-photo edit-only" onclick="event.stopPropagation(); editSpotField(event,'${idx}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字；留空＝用景點名稱）')">修正導航</button>${spot.link ? `<a class="btn btn-photo" href="${escAttr(spot.link)}" target="_blank" rel="noopener">${escHtml(spot.linkLabel)}</a>` : ''}<button class="btn btn-photo" onclick="document.getElementById('file-${idx}').click()">上傳照片</button>${resvButtonsHTML(idx,spot)}${mamaBtnHTML(idx)}</div><input type="file" accept="image/*" id="file-${idx}" style="display:none" multiple onchange="handlePhoto(event, '${idx}')">${pStrip}${collapseBtnHTML(idx)}</div></div></div>`;
+    return `<div class="sub-spot-card sub-spot-${spot.cat || 'other'}" id="spot-card-${idx}"><div class="sub-spot-header${coverUrl?' has-thumb':''}" onclick="toggleSpotDetails('${idx}')">${coverUrl?`<div class="gh-thumb sm">${coverImgHTML('guide-cover-img',coverUrl)}</div>`:''}<div class="sub-spot-header-content"><h4>${safeName} ${statusChipHTML(idx)}</h4><p class="short-desc">${safeDesc}</p>${miniStripHTML}</div>${favBtnHTML(idx,"inline")}<div class="chevron">▼</div></div><div class="sub-spot-details-wrap"><div class="sub-spot-details" onclick="event.stopPropagation()">${photoViewerHTML(idx,spot)}${customBar}${editSpotAreaHTML}<p class="full-desc">${safeFullDesc}</p>${marksBoxHTML(idx)}${spot.recDishes ? `<div class="dish-tag">🍲 必點推薦：${escHtml(spot.recDishes)}</div>` : ''}${reorderableBlocksHTML}<div class="action-row" style="margin-top:10px;"><a class="btn btn-map" href="${escAttr(mapsLink(navQuery))}" target="_blank" rel="noopener">導航</a><button class="btn btn-photo edit-only" onclick="event.stopPropagation(); editSpotField(event,'${idx}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字；留空＝用景點名稱）')">修正導航</button>${spot.link ? `<a class="btn btn-photo" href="${escAttr(spot.link)}" target="_blank" rel="noopener">${escHtml(spot.linkLabel)}</a>` : ''}<button class="btn btn-photo" onclick="document.getElementById('file-${idx}').click()">上傳照片</button>${resvButtonsHTML(idx,spot)}${mamaBtnHTML(idx)}</div><input type="file" accept="image/*" id="file-${idx}" style="display:none" multiple onchange="handlePhoto(event, '${idx}')">${subSpotsHTML(idx)}${pStrip}${collapseBtnHTML(idx)}</div></div></div>`;
   }
 
-  return `<div class="guide-card" id="spot-card-${idx}"><div class="guide-header" style="--scrim:${CAT_SCRIM[spot.cat]||'22,34,70'}" onclick="toggleSpotDetails('${idx}')"><div class="gh-thumb"><img class="guide-cover-img" src="${escAttr(bg)}"${photoPosAttr(bg)} alt="" loading="lazy" onerror="imageErrorFallback(this)"><button class="photo-pos-btn edit-only" type="button" data-src="${escAttr(bg)}" onclick="openPhotoPosEditor(event,this)">調整位置</button></div><div class="guide-header-content"><div class="gh-meta"><span class="cat-label ${c.cls}">${c.emoji} ${c.label}</span>${statusChipHTML(idx)}</div><h3>${safeName}</h3><p class="short-desc">${safeDesc}</p></div>${favBtnHTML(idx,"on-cover")}<div class="chevron">▼</div></div><div class="guide-details-wrap"><div class="guide-details" onclick="event.stopPropagation()">${photoViewerHTML(idx,spot)}${customBar}${editSpotAreaHTML}<p class="full-desc">${safeFullDesc}</p>${marksBoxHTML(idx)}${reorderableBlocksHTML}${spot.tip?`<div class="tip-box"><b>📸 拍照與自駕小解密：</b>${escHtml(spot.tip)}</div>`:''}${spot.docMap?`<div class="tip-box" style="background: linear-gradient(120deg,#E8EDF8,#fff); border-color:#D7E1F5; color:#223551;"><b>🗺️ 官方步道地圖與狀態：</b><a href="${escAttr(spot.docMap)}" target="_blank" rel="noopener" style="color:var(--blue); font-weight:700; text-decoration:underline;">點此開啟</a></div>`:''}${spot.park?`<div class="park-box"><b>🅿️ 停車＆自駕補給：</b>${escHtml(spot.park)}</div>`:''}<div class="action-row" style="margin-top:10px;"><a class="btn btn-map" href="${escAttr(mapsLink(navQuery))}" target="_blank" rel="noopener">導航導出</a><button class="btn btn-photo edit-only" onclick="event.stopPropagation(); editSpotField(event,'${idx}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字；留空＝用景點名稱）')">修正導航</button>${spot.link ? `<a class="btn btn-photo" href="${escAttr(spot.link)}" target="_blank" rel="noopener">${escHtml(spot.linkLabel)}</a>` : ''}<button class="btn btn-photo" onclick="document.getElementById('file-${idx}').click()">上傳照片</button>${resvButtonsHTML(idx,spot)}${mamaBtnHTML(idx)}</div><input type="file" accept="image/*" id="file-${idx}" style="display:none" multiple onchange="handlePhoto(event, '${idx}')">${pStrip}${collapseBtnHTML(idx)}</div></div></div>`;
+  return `<div class="guide-card" id="spot-card-${idx}"><div class="guide-header" style="--scrim:${CAT_SCRIM[spot.cat]||'22,34,70'}" onclick="toggleSpotDetails('${idx}')"><div class="gh-thumb"><img class="guide-cover-img" src="${escAttr(bg)}"${photoPosAttr(bg)} alt="" loading="lazy" onerror="imageErrorFallback(this)"><button class="photo-pos-btn edit-only" type="button" data-src="${escAttr(bg)}" onclick="openPhotoPosEditor(event,this)">調整位置</button></div><div class="guide-header-content"><div class="gh-meta"><span class="cat-label ${c.cls}">${c.emoji} ${c.label}</span>${statusChipHTML(idx)}</div><h3>${safeName}</h3><p class="short-desc">${safeDesc}</p></div>${favBtnHTML(idx,"on-cover")}<div class="chevron">▼</div></div><div class="guide-details-wrap"><div class="guide-details" onclick="event.stopPropagation()">${photoViewerHTML(idx,spot)}${customBar}${editSpotAreaHTML}<p class="full-desc">${safeFullDesc}</p>${marksBoxHTML(idx)}${reorderableBlocksHTML}${spot.tip?`<div class="tip-box"><b>📸 拍照與自駕小解密：</b>${escHtml(spot.tip)}</div>`:''}${spot.docMap?`<div class="tip-box" style="background: linear-gradient(120deg,#E8EDF8,#fff); border-color:#D7E1F5; color:#223551;"><b>🗺️ 官方步道地圖與狀態：</b><a href="${escAttr(spot.docMap)}" target="_blank" rel="noopener" style="color:var(--blue); font-weight:700; text-decoration:underline;">點此開啟</a></div>`:''}${spot.park?`<div class="park-box"><b>🅿️ 停車＆自駕補給：</b>${escHtml(spot.park)}</div>`:''}<div class="action-row" style="margin-top:10px;"><a class="btn btn-map" href="${escAttr(mapsLink(navQuery))}" target="_blank" rel="noopener">導航導出</a><button class="btn btn-photo edit-only" onclick="event.stopPropagation(); editSpotField(event,'${idx}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字；留空＝用景點名稱）')">修正導航</button>${spot.link ? `<a class="btn btn-photo" href="${escAttr(spot.link)}" target="_blank" rel="noopener">${escHtml(spot.linkLabel)}</a>` : ''}<button class="btn btn-photo" onclick="document.getElementById('file-${idx}').click()">上傳照片</button>${resvButtonsHTML(idx,spot)}${mamaBtnHTML(idx)}</div><input type="file" accept="image/*" id="file-${idx}" style="display:none" multiple onchange="handlePhoto(event, '${idx}')">${subSpotsHTML(idx)}${pStrip}${collapseBtnHTML(idx)}</div></div></div>`;
 }
 
 /* 讀取檔案並自動壓縮：長邊限制在 1600px、轉存為 JPEG(品質0.82)，
@@ -1610,7 +1670,7 @@ function renderDayContent(){
   const d = days[activeDay];
   const curSubTab = activeSubTabStore[activeDay] || 'main';
   const stayList=dayStays(activeDay);
-  const stayBtns=stayList.length?`<span class="stay-quick-btns"><a class="stay-quick-nav" href="${escAttr(mapsLink(stayList[0].nav))}" target="_blank" rel="noopener">導航</a><button class="stay-quick-fix edit-only" type="button" onclick="editSpotField(event,'${stayList[0].key}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字）')">修正</button></span>`:'';
+  const stayBtns=stayList.length?`<span class="stay-quick-btns"><a class="stay-quick-nav" href="${escAttr(mapsLink(stayList[0].nav))}" target="_blank" rel="noopener">導航</a><button class="stay-quick-driver" type="button" data-name="${escAttr(stayList[0].name)}" data-nav="${escAttr(stayList[0].nav)}" onclick="showDriverCard(this.dataset.name,this.dataset.nav)">給司機看</button><button class="stay-quick-fix edit-only" type="button" onclick="editSpotField(event,'${stayList[0].key}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字）')">修正</button></span>`:'';
   const stayQuickHTML=stayList.length?`<div class="stay-quick-card"><div class="stay-quick-top"><div class="stay-quick-icon"><img src="images/nav-lodging.webp" alt="" width="34" height="34"></div><div class="stay-quick-copy"><small>今晚住宿</small><strong>${stayList.map(x=>escHtml(x.name)).join('、')}</strong></div></div>${stayList.map((x,i)=>`<div class="stay-quick-amen">${stayList.length>1?`<em>${escHtml(x.name)}</em>`:''}${hotelAmenityChips(x.key)}${i===stayList.length-1?stayBtns:''}</div>`).join('')}</div>`:emptyStayCardHTML(activeDay);
 
   const mainList = applyOrder(activeDay, 'main', getNaturalList(activeDay, 'main'));
@@ -1657,6 +1717,7 @@ function renderDayContent(){
       ${d.dayDesc ? `<h2>${d.dayDesc}</h2>` : ''}
       <div class="weather-strip"><div class="ico${DAY_ICON_IMG[activeDay]!==undefined?' img-ico':''}">${dayIconHTML(activeDay,d.weatherIco)}</div><div class="txt"><b style="font-family:'Zen Kaku Gothic New', sans-serif; font-size:14px;">${d.enRegion}</b><br><span style="font-size:11.5px; opacity:0.85;">${d.wear}</span></div></div>
       ${stayQuickHTML}
+      <div id="daySnowSlot">${daySnowBannerHTML(activeDay)}</div>
     </div>
     <div id="day-card-${activeDay}">
       <div class="subtab-content${['weather','transport','routemap','eat'].includes(curSubTab)?'':' active'}" data-type="spots">
@@ -1878,6 +1939,159 @@ function renderOneLiveCity(k){
 }
 
 
+/* ============ hk11：今日雪況＋降雪提醒（Open-Meteo 預報；積雪為模型估計） ============
+   - 天氣頁：各地「現在積雪／過去 24 小時新雪／接下來 12 小時降雪／路面」＋提醒
+   - 每日行程：這天走訪地區的降雪預報（出發前 16 天內才有），當天另顯示接下來幾小時
+   - 日期晶片：預報大雪或暴風雪的日子出現小雪花 */
+const SNOW_CACHE_KEY='hokkaido_snow_v1';
+let snowCache=(()=>{try{return JSON.parse(localStorage.getItem(SNOW_CACHE_KEY))||{};}catch(e){return {};}})();
+const SNOW_ICON='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5M2.8 9.6l3.4.9-.9 3.4M21.2 14.4l-3.4-.9.9-3.4M2.8 14.4l3.4-.9-.9-3.4M21.2 9.6l-3.4.9.9 3.4"/></svg>';
+function tokyoHourISO(d=new Date()){
+  const t=new Date(d.getTime()+9*3600*1000);
+  return t.toISOString().slice(0,13)+':00';
+}
+function dayISO(dayIdx){const [m,dd]=String(days[dayIdx].date).split('/').map(Number);return `2027-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;}
+async function fetchSnowFor(k,force){
+  if(!navigator.onLine)return false;
+  const c=snowCache[k];if(!force&&c&&Date.now()-c.at<20*60*1000)return false;
+  const {lat,lon}=CITIES[k];
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=snowfall,snow_depth,temperature_2m,wind_gusts_10m&daily=snowfall_sum,temperature_2m_min,temperature_2m_max,wind_gusts_10m_max&past_days=1&forecast_days=16&timezone=Asia%2FTokyo`);
+    if(!r.ok)return false;
+    const d=await r.json();if(!d||!d.hourly||!d.daily)return false;
+    const now=tokyoHourISO();let i0=d.hourly.time.indexOf(now);if(i0<0)i0=Math.max(0,d.hourly.time.findIndex(t=>t>now)-1);
+    const from=Math.max(0,i0-24),to=i0+48,sl=a=>(a||[]).slice(from,to);
+    snowCache[k]={at:Date.now(),
+      hourly:{time:sl(d.hourly.time),snow:sl(d.hourly.snowfall),depth:sl(d.hourly.snow_depth),temp:sl(d.hourly.temperature_2m),gust:sl(d.hourly.wind_gusts_10m)},
+      daily:{time:d.daily.time,snow:d.daily.snowfall_sum||[],tmin:d.daily.temperature_2m_min||[],tmax:d.daily.temperature_2m_max||[],gust:d.daily.wind_gusts_10m_max||[]}};
+    try{localStorage.setItem(SNOW_CACHE_KEY,JSON.stringify(snowCache));}catch(e){}
+    return true;
+  }catch(e){return false;}
+}
+async function prefetchSnow(force){
+  const res=await Promise.all(Object.keys(CITIES).map(k=>fetchSnowFor(k,force)));
+  if(res.some(Boolean)||force)onSnowUpdated();
+}
+function onSnowUpdated(){
+  try{renderSnowPanel();}catch(e){}
+  try{const slot=document.getElementById('daySnowSlot');if(slot&&typeof activeDay==='number')slot.innerHTML=daySnowBannerHTML(activeDay);}catch(e){}
+  try{if(typeof renderDayChips==='function')renderDayChips();}catch(e){}
+}
+const sum_=a=>a.reduce((x,y)=>x+(Number(y)||0),0);
+/* 一個地點「現在」的雪況 */
+function snowNow(k){
+  const c=snowCache[k];if(!c||!c.hourly||!c.hourly.time.length)return null;
+  const h=c.hourly,now=tokyoHourISO();
+  let i=h.time.indexOf(now);if(i<0)i=Math.max(0,h.time.findIndex(t=>t>now)-1);
+  if(i<0)return null;
+  const past=sum_(h.snow.slice(Math.max(0,i-24),i)),next12=sum_(h.snow.slice(i,i+12)),next24=sum_(h.snow.slice(i,i+24));
+  const depthM=h.depth[i];const depth=depthM==null?null:Math.round(depthM*100);
+  const temps=h.temp.slice(Math.max(0,i-24),i+12).filter(v=>v!=null);
+  const tmin=temps.length?Math.min(...temps):null,tmax=temps.length?Math.max(...temps):null;
+  const gust=Math.max(0,...h.gust.slice(i,i+12).filter(v=>v!=null));
+  let startIn=null;for(let j=i;j<Math.min(h.time.length,i+12);j++){if((Number(h.snow[j])||0)>=0.2){startIn=j-i;break;}}
+  return {past,next12,next24,depth,tmin,tmax,gust,startIn,temp:h.temp[i],at:c.at};
+}
+/* 路面狀況：融雪又結冰最滑；新雪後隔天也滑 */
+function roadHint(s){
+  if(!s)return '';
+  const snowy=(s.depth||0)>0||s.past>=0.5||s.next12>=0.5;
+  if(snowy&&s.tmin!=null&&s.tmax!=null&&s.tmin<0&&s.tmax>-1)return '融雪又結冰，路面非常滑：穿防滑鞋、加冰爪，走路步伐放小。';
+  if(s.past>=3)return '昨晚到今天有新雪，人行道雪多難走，坡道與斑馬線特別滑。';
+  if(snowy&&s.tmin!=null&&s.tmin<=-8)return '天氣嚴寒，路面是乾冷的壓雪，相對好走，但手腳容易凍，暖暖包貼好。';
+  if(snowy)return '路面有積雪，穿防滑鞋，進出店家注意門口的結冰。';
+  return '目前沒有明顯積雪。';
+}
+function fmtCm(v){v=Number(v)||0;return v<0.5?'0':v<10?v.toFixed(1).replace(/\.0$/,''):String(Math.round(v));}
+/* 某天（行程日）的降雪預報 */
+function dailySnow(k,iso){
+  const c=snowCache[k];if(!c||!c.daily)return null;
+  const i=c.daily.time.indexOf(iso);if(i<0)return null;
+  return {snow:Number(c.daily.snow[i])||0,tmin:c.daily.tmin[i],tmax:c.daily.tmax[i],gust:Number(c.daily.gust[i])||0};
+}
+function daySnowInfo(dayIdx){
+  const iso=dayISO(dayIdx);let best=null;
+  (DAY_CITIES[dayIdx]||['Sapporo']).forEach(k=>{const r=dailySnow(k,iso);if(r&&(!best||r.snow>best.snow||(r.snow===best.snow&&r.gust>best.gust)))best={...r,city:CITIES[k].label};});
+  return best;
+}
+function snowLevel(r){if(!r)return 0;if(r.snow>=10||(r.snow>=3&&r.gust>=50))return 2;if(r.snow>=1)return 1;return 0;}
+function daySnowy(i){try{return snowLevel(daySnowInfo(i))>=2;}catch(e){return false;}}
+function snowAdvice(r){
+  const out=[];
+  if(r.snow>=10)out.push('大雪：JR、巴士與機場聯外交通容易延誤或停駛，移動日請預留時間，出門前查運行狀況。');
+  else if(r.snow>=3)out.push('會下雪：路面積雪變多，走路與搭車都多留一點時間。');
+  if(r.gust>=50&&r.snow>=1)out.push('陣風強，可能有地吹雪／暴風雪，視線差；纜車、展望台可能停駛。');
+  else if(r.gust>=50)out.push('陣風很強，纜車與展望台可能停駛，體感溫度會更低。');
+  if(r.tmin!=null&&r.tmin<=-10)out.push(`最低約 ${Math.round(r.tmin)}°C，夜間活動（祭典、夜景）要全副武裝。`);
+  return out;
+}
+function daySnowBannerHTML(dayIdx){try{return daySnowBannerHTML_(dayIdx);}catch(e){return '';}}
+function daySnowBannerHTML_(dayIdx){
+  if(typeof dayIdx!=='number'||!days[dayIdx])return '';
+  const lines=[];let lv=0;
+  const r=daySnowInfo(dayIdx);
+  if(r){lv=snowLevel(r);
+    if(r.snow>=1)lines.push(`預報這天降雪約 <b>${fmtCm(r.snow)} cm</b>（${escHtml(r.city)}）${r.tmin!=null?`，氣溫 ${Math.round(r.tmin)}～${Math.round(r.tmax)}°C`:''}。`);
+    snowAdvice(r).forEach(x=>lines.push(escHtml(x)));
+  }
+  if(dayIdx===tripTodayIndex()){
+    (DAY_CITIES[dayIdx]||['Sapporo']).forEach(k=>{const s=snowNow(k);if(!s)return;
+      const parts=[];
+      if(s.depth!=null)parts.push(`積雪約 ${s.depth} cm`);
+      if(s.past>=0.5)parts.push(`過去 24 小時新雪 ${fmtCm(s.past)} cm`);
+      if(s.next12>=0.5)parts.push(`${s.startIn<=0?'現在到':s.startIn+' 小時後起'} 12 小時內再下 ${fmtCm(s.next12)} cm`);
+      if(parts.length)lines.push(`<b>${escHtml(CITIES[k].label)}今日雪況</b>：${parts.join('，')}。${escHtml(roadHint(s))}`);
+      if(s.next12>=5)lv=Math.max(lv,2);
+    });
+  }
+  if(!lines.length)return '';
+  return `<div class="snow-banner${lv>=2?' heavy':''}">${SNOW_ICON}<div><b>${lv>=2?'大雪提醒':'降雪提醒'}</b>${lines.map(x=>`<p>${x}</p>`).join('')}</div></div>`;
+}
+function ensureSnowForDay(){
+  Promise.all(Object.keys(CITIES).map(k=>fetchSnowFor(k,false))).then(r=>{if(r.some(Boolean))onSnowUpdated();}).catch(()=>{});
+}
+/* 天氣頁：今日雪況（各地卡片）＋提醒 */
+function renderSnowPanel(){
+  const box=document.getElementById('snowAlertBox'),list=document.getElementById('snowNowList'),time=document.getElementById('snowNowTime');
+  if(!box||!list)return;
+  const keys=Object.keys(CITIES);
+  if(!keys.some(k=>snowCache[k])){
+    list.innerHTML=`<div class="snow-empty">${navigator.onLine?'讀取雪況中…':'目前離線，連上網路後會自動讀取雪況。'}</div>`;box.innerHTML='';return;
+  }
+  list.innerHTML=keys.map(k=>{
+    const s=snowNow(k);
+    if(!s)return `<div class="snow-city"><div class="snow-city-head"><strong>${escHtml(CITIES[k].label)}</strong></div><div class="snow-empty">尚無資料</div></div>`;
+    const hot=s.next12>=5?' heavy':s.next12>=0.5?' on':'';
+    return `<div class="snow-city${hot}">
+      <div class="snow-city-head"><strong>${escHtml(CITIES[k].label)}</strong>${s.temp!=null?`<span>${Math.round(s.temp)}°C</span>`:''}</div>
+      <div class="snow-stats">
+        <div><small>積雪</small><b>${s.depth==null?'—':s.depth}<i>cm</i></b></div>
+        <div><small>過去24h新雪</small><b>${fmtCm(s.past)}<i>cm</i></b></div>
+        <div><small>接下來12h</small><b>${fmtCm(s.next12)}<i>cm</i></b></div>
+      </div>
+      ${s.next12>=0.5?`<div class="snow-when">❄ ${s.startIn<=0?'現在或馬上':s.startIn+' 小時後'}開始下雪${s.gust>=50?`，陣風 ${Math.round(s.gust)} km/h`:''}</div>`:''}
+      <div class="snow-road"><b>路面</b><span>${escHtml(roadHint(s))}</span></div>
+    </div>`;
+  }).join('');
+  /* 提醒：接下來 12 小時有雪的地點＋行程日預報大雪 */
+  let html='';
+  const soon=keys.map(k=>({k,s:snowNow(k)})).filter(x=>x.s&&x.s.next12>=0.5);
+  if(soon.length)html+=`<div class="snow-banner${soon.some(x=>x.s.next12>=5)?' heavy':''}">${SNOW_ICON}<div><b>接下來 12 小時會下雪</b><ul>${soon.map(x=>`<li>${escHtml(CITIES[x.k].label)}：${x.s.startIn<=0?'現在或馬上':x.s.startIn+' 小時後'}起，約 ${fmtCm(x.s.next12)} cm${x.s.next12>=5?'（大雪，交通可能延誤）':''}</li>`).join('')}</ul></div></div>`;
+  const trip=days.map((d,i)=>({i,r:daySnowInfo(i)})).filter(x=>x.r&&x.r.snow>=1);
+  if(trip.length)html+=`<div class="snow-banner trip">${SNOW_ICON}<div><b>行程日降雪預報</b><ul>${trip.map(x=>`<li${snowLevel(x.r)>=2?' class="heavy"':''}>D${days[x.i].dayNum}（${days[x.i].date}）${escHtml(x.r.city)}：約 ${fmtCm(x.r.snow)} cm${snowLevel(x.r)>=2?'・大雪／強風':''}</li>`).join('')}</ul></div></div>`;
+  if(!html)html=`<div class="snow-banner ok">${SNOW_ICON}<div><b>降雪提醒</b><p>各地接下來 12 小時沒有明顯降雪。出發前 16 天內，行程日的降雪預報會自動顯示在這裡和每天的行程頁。</p></div></div>`;
+  box.innerHTML=html;
+  if(time){const ts=keys.map(k=>snowCache[k]&&snowCache[k].at).filter(Boolean);time.textContent=ts.length?`雪況更新：${new Date(Math.min(...ts)).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}・積雪為 Open-Meteo 模型估計，實際以現場為準`:'';}
+}
+/* 每日天氣卡片裡的一行雪況 */
+function snowLineHTML(k){
+  const s=snowNow(k);if(!s)return '';
+  return `<div class="dw-snow2${s.next12>=0.5?' on':''}">❄ 積雪 ${s.depth==null?'—':s.depth} cm${s.next12>=0.5?`・12h 內 +${fmtCm(s.next12)} cm`:''}</div>`;
+}
+setTimeout(()=>{renderSnowPanel();prefetchSnow(false);},2500);
+setInterval(()=>prefetchSnow(false),30*60*1000);
+window.addEventListener('online',()=>prefetchSnow(true));
+
 /* ============ 內嵌 Windy 天氣圖 ============ */
 function initRainRadar(){ refreshRainRadar(); }
 function refreshRainRadar(){
@@ -2066,12 +2280,7 @@ function renderRulesList() {
       <div style="flex:1;">
         ${title ? `<div style="font-weight:900; font-size:13.5px; color:var(--ink); margin-bottom:3px;">${escHtml(title)}</div>` : ''}
         <div style="font-size:12.5px; color:var(--ink-soft); line-height:1.6;">${escHtml(body)}</div>
-        <div style="margin-top:8px; display:flex; gap:8px;">
-          ${r.img ? `<button onclick="openAttachModal('${r.img}')" style="background:var(--teal); color:#fff; border:none; padding:6px 12px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer; box-shadow:var(--shadow-sm);">🖼️ 檢視附圖</button>
-                     <button onclick="removeRuleImg(${i})" style="background:#EAEEF5; color:var(--ink); border:none; padding:6px 12px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer;">✕ 移除</button>` 
-                  : `<button onclick="document.getElementById('ruleFile-${i}').click()" style="background:#fff; border:1px dashed #C5C8D3; color:var(--ink-soft); padding:6px 12px; border-radius:6px; font-size:11.5px; font-weight:700; cursor:pointer;">📷 新增附圖</button>`}
-          <input type="file" id="ruleFile-${i}" accept="image/*" style="display:none" onchange="handleRulePhoto(event, ${i})">
-        </div>
+        ${ruleImgsHTML(r,i)}
       </div>
       <button class="del" onclick="delRule(${i})" style="margin-top:2px;">✕</button>
     </div>
@@ -2086,14 +2295,34 @@ function renderRulesList() {
     </div>
   `;
 }
-async function handleRulePhoto(e,i){const f=e.target.files[0];e.target.value='';if(!f)return;try{rulesData[i].img=await uploadMediaFile(f,'rules');persistRules();renderRulesList();}catch(err){reportUploadError(err);updateSyncStatus(err);}}
-function removeRuleImg(i) { const removed=rulesData[i].img;rulesData[i].img = null; persistRules(); renderRulesList();offerUndo('已移除規範附圖',()=>{rulesData[i].img=removed;persistRules();renderRulesList();}); }
+/* hk11：每則規範可以放多張附圖 */
+function ruleImgs(r){return mergeUniqueUrls(r&&r.imgs,r&&r.img?[r.img]:[]);}
+function ruleImgsHTML(r,i){
+  const imgs=ruleImgs(r);
+  const th=imgs.map((u,k)=>`<div class="rule-ph"><img src="${escAttr(u)}" data-src="${escAttr(u)}" alt="規範附圖 ${k+1}" loading="lazy" onclick="openAttachModal(this.dataset.src)"><button type="button" class="edit-only" aria-label="移除這張附圖" onclick="removeRuleImg(${i},${k})">✕</button></div>`).join('');
+  return `<div class="rule-phs${imgs.length?'':' no-img'}">${th}<label class="rule-ph-add edit-only">📷 ${imgs.length?'再加附圖':'新增附圖'}<input type="file" accept="image/*" multiple hidden onchange="handleRulePhoto(event, ${i})"></label></div>`;
+}
+async function handleRulePhoto(e,i){
+  const files=[...(e.target.files||[])];e.target.value='';if(!files.length)return;
+  const id=rulesData[i]&&rulesData[i].id;const urls=[];
+  updateSyncStatus(null,'saving');
+  for(const f of files){try{urls.push(await uploadMediaFile(f,'rules'));}catch(err){reportUploadError(err);updateSyncStatus(err);break;}}
+  if(!urls.length)return;
+  const r=rulesData.find(x=>x.id===id)||rulesData[i];if(!r)return;
+  r.imgs=[...ruleImgs(r),...urls];r.img=null;persistRules();renderRulesList();
+}
+function removeRuleImg(i,k){
+  const r=rulesData[i];if(!r)return;
+  if(!confirm('移除這張附圖？（5 秒內可復原）'))return;
+  const imgs=ruleImgs(r);const removed=imgs.splice(k,1)[0];r.imgs=imgs;r.img=null;persistRules();renderRulesList();
+  offerUndo('已移除規範附圖',()=>{const t=rulesData.find(x=>x.id===r.id);if(!t)return;const a=ruleImgs(t);a.splice(Math.min(k,a.length),0,removed);t.imgs=a;t.img=null;persistRules();renderRulesList();});
+}
 function delRule(i) { const removed=rulesData.splice(i, 1)[0]; persistRules(); renderRulesList();offerUndo('已刪除旅遊規範',()=>{rulesData.splice(i,0,removed);persistRules();renderRulesList();}); }
 function addRuleItem() {
   const titleInput = document.getElementById('newRuleTitle');
   const input = document.getElementById('newRuleItem');
   if(input && input.value.trim()){
-    rulesData.push({ id:'rule-'+crypto.randomUUID(), title: titleInput ? titleInput.value.trim() : '', text: input.value.trim(), img: null });
+    rulesData.push({ id:'rule-'+crypto.randomUUID(), title: titleInput ? titleInput.value.trim() : '', text: input.value.trim(), img: null, imgs: [] });
     persistRules(); renderRulesList();
   }
 }
@@ -2209,7 +2438,7 @@ function updateNetStatus(){
     ? '<span class="net-dot online"></span><span class="net-txt">線上</span>'
     : '<span class="net-dot offline"></span><span class="net-txt">離線</span>';
 }
-window.addEventListener('online', async()=>{ updateNetStatus(); loadLiveWeather(); refreshRainRadar();if(readAuthSession()){familyAuthSession=readAuthSession();try{await ensureAuthToken();startFamilyCloud();}catch(e){updateSyncStatus(e);}} });
+window.addEventListener('online', async()=>{ updateNetStatus(); loadLiveWeather(); refreshRainRadar();if(readAuthSession()){familyAuthSession=readAuthSession();try{await ensureAuthToken();hideReloginBanner();startFamilyCloud();}catch(e){updateSyncStatus(e);if(/登入已過期/.test(String(e&&e.message||e)))showReloginBanner();}} });
 window.addEventListener('offline', updateNetStatus);
 
 /* ============ Service Worker（離線快取整個網頁） ============ */
@@ -2227,7 +2456,7 @@ function setTab(tab) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-'+tab).classList.add('active');
   window.scrollTo({top:0, behavior:'smooth'});
-  if(tab === 'weather'){ setTimeout(refreshRainRadar, 100); }
+  if(tab === 'weather'){ setTimeout(refreshRainRadar, 100); renderSnowPanel(); prefetchSnow(false); }
 }
 
 /* ============ 路線摘要：可收合 ============ */
@@ -2281,6 +2510,7 @@ function openFormModal({title,fields,onSave,onDelete,saveText='儲存'}){
     let input;
     if(f.type==='textarea') input=`<textarea data-f="${f.id}" rows="${f.rows||3}" placeholder="${escAttr(f.placeholder||'')}">${escHtml(f.value||'')}</textarea>`;
     else if(f.type==='file') input=`<input type="file" data-f="${f.id}" accept="image/*">`;
+    else if(f.type==='files') input=`<input type="file" data-f="${f.id}" data-multi="1" accept="image/*" multiple>`;
     else if(f.type==='select') input=`<select data-f="${f.id}">${f.options.map(o=>`<option value="${escAttr(o.value)}" ${o.value===f.value?'selected':''}>${escHtml(o.label)}</option>`).join('')}</select>`;
     else input=`<input type="text" data-f="${f.id}" value="${escAttr(f.value||'')}" placeholder="${escAttr(f.placeholder||'')}">`;
     return `<label class="spot-edit-field"><span>${escHtml(f.label)}</span>${input}</label>`;
@@ -2289,7 +2519,7 @@ function openFormModal({title,fields,onSave,onDelete,saveText='儲存'}){
   document.body.appendChild(wrap);
   wrap.querySelector('[data-close]').onclick=()=>closeFormModal();
   wrap.querySelector('[data-save]').onclick=()=>{
-    const v={};wrap.querySelectorAll('[data-f]').forEach(el=>{v[el.dataset.f]=el.type==='file'?((el.files&&el.files[0])||null):el.value.trim();});
+    const v={};wrap.querySelectorAll('[data-f]').forEach(el=>{v[el.dataset.f]=el.type==='file'?(el.dataset.multi?[...(el.files||[])]:((el.files&&el.files[0])||null)):el.value.trim();});
     const r=onSave(v);
     if(r&&typeof r.then==='function'){const btn=wrap.querySelector('[data-save]');btn.disabled=true;btn.textContent='儲存中…';r.then(ok=>{if(ok===false){btn.disabled=false;btn.textContent=saveText;}else closeFormModal();}).catch(()=>{btn.disabled=false;btn.textContent=saveText;});}
     else if(r!==false)closeFormModal();
@@ -2365,7 +2595,7 @@ function dayStays(i){
   const add=(s,key)=>{if(s.cat!=='hotel'||hidden.has(key))return;const name=currentFieldValue(key,'name',s.name)||s.name;out.push({key,name,nav:currentFieldValue(key,'mapQuery',null)||name});};
   (d.spots||[]).forEach((s,j)=>add(s,`d${i}-m${j}`));
   (d.moreSpots||[]).forEach((s,j)=>add(s,`d${i}-s${j}`));
-  (customSpotsStore[i]||[]).forEach((s,j)=>add(s,`d${i}-c${j}`));
+  (customSpotsStore[i]||[]).forEach((s,j)=>{if(!s.deleted)add(s,`d${i}-c${j}`);});
   return out;
 }
 
@@ -2709,7 +2939,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk10-2026-10-04';
+const APP_VERSION='hk11-2026-10-05';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -2935,13 +3165,22 @@ function icImg(name,cls='ic-img'){return `<img class="${cls}" src="${NAV_IC[name
 
 /* ---------- 標頭控制 ---------- */
 function currentUiMode(){return document.body.classList.contains('mode-edit')?'edit':'travel';}
-function toggleUiMode(){setUiMode(currentUiMode()==='edit'?'travel':'edit');}
+/* hk11：按鈕寫「按了會做什麼」；進入編輯模式先確認一次，避免長輩誤觸後看到一堆刪除鈕 */
+function toggleUiMode(){
+  if(currentUiMode()==='edit'){setUiMode('travel');return;}
+  let asked=false;try{asked=sessionStorage.getItem('hokkaido_edit_confirmed')==='1';}catch(e){}
+  if(!asked&&!confirm('要進入「編輯模式」嗎？\n\n編輯模式可以修改、新增、刪除行程內容。\n只想看行程的話，請按「取消」。'))return;
+  try{sessionStorage.setItem('hokkaido_edit_confirmed','1');}catch(e){}
+  setUiMode('edit');
+}
 function toggleTextSize(){setTextSize(document.body.classList.contains('large-text')?0:1);}
 function syncHeaderControls(){
   const m=document.getElementById('modeBtn');
-  if(m){const e=currentUiMode()==='edit';m.textContent=e?'編輯模式':'旅行模式';m.classList.toggle('edit',e);m.title=e?'目前是編輯模式，點一下切換成旅行模式':'目前是旅行模式，點一下切換成編輯模式';}
+  if(m){const e=currentUiMode()==='edit';m.textContent=e?'✓ 完成編輯':'✎ 編輯';m.classList.toggle('edit',e);m.title=e?'改完了，回到只看行程的旅行模式':'進入編輯模式，可以修改行程';m.setAttribute('aria-label',m.title);}
   const t=document.getElementById('sizeBtn');
-  if(t){const big=document.body.classList.contains('large-text');t.textContent=big?'特大字':'標準字';t.classList.toggle('on',big);}
+  if(t){const big=document.body.classList.contains('large-text');t.textContent=big?'字縮小':'字放大';t.classList.toggle('on',big);t.setAttribute('aria-label',big?'把字縮回標準大小':'把字放大');}
+  let bar=document.getElementById('editModeBar');
+  if(!bar&&document.querySelector('.app')){bar=document.createElement('div');bar.id='editModeBar';bar.className='edit-mode-bar';bar.innerHTML='<span>✎ 編輯模式中：可以修改、新增、刪除</span><button type="button" onclick="setUiMode(\'travel\')">完成編輯</button>';document.querySelector('.app').prepend(bar);}
 }
 document.addEventListener('DOMContentLoaded',syncHeaderControls);
 
@@ -2979,15 +3218,15 @@ function openMarksPanel(filter){
 function collectSpots(filterFn){
   const out=[];
   days.forEach((day,dayIdx)=>{
-    const hidden=new Set(hiddenFixedSpotsStore[dayIdx]||[]);
     const add=(spot,key)=>{
-      if(hidden.has(key)||!filterFn(spot,dayIdx,key))return;
+      const di=(typeof spotDayOf==='function'?spotDayOf(key):null)??dayIdx;
+      if((hiddenFixedSpotsStore[di]||[]).includes(key)||!filterFn(spot,di,key))return;
       const name=currentFieldValue(key,'name',spot.name)||spot.name;
-      out.push({dayIdx,key,cat:spot.cat,name,desc:currentFieldValue(key,'desc',spot.desc)||spot.desc||'',hours:currentFieldValue(key,'hours',spot.hours)||'',tags:spot.tags||[],nav:currentFieldValue(key,'mapQuery',null)||name,img:spotCoverFor(key,spot)});
+      out.push({dayIdx:di,key,cat:spot.cat,name,desc:currentFieldValue(key,'desc',spot.desc)||spot.desc||'',hours:currentFieldValue(key,'hours',spot.hours)||'',tags:spot.tags||[],nav:currentFieldValue(key,'mapQuery',null)||name,img:spotCoverFor(key,spot)});
     };
     (day.spots||[]).forEach((s,i)=>add(s,`d${dayIdx}-m${i}`));
     (day.moreSpots||[]).forEach((s,i)=>add(s,`d${dayIdx}-s${i}`));
-    (customSpotsStore[dayIdx]||[]).forEach((s,i)=>add(s,`d${dayIdx}-c${i}`));
+    (customSpotsStore[dayIdx]||[]).forEach((s,i)=>{if(!s.deleted)add(s,`d${dayIdx}-c${i}`);});
   });
   return out;
 }
@@ -3142,6 +3381,25 @@ function markLabel(key){
 
 /* ---------- 吃·逛北海道：依區域分組 ---------- */
 const EAT_AREAS=['札幌站周邊','大通・狸小路','札幌其他','小樽','千歲・支笏湖'];
+let eatAreaCustom=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_eat_area_custom'));return Array.isArray(v)?v:[];}catch(e){return [];}})();
+function persistEatAreaCustom(){safeSetItem('hokkaido_eat_area_custom',eatAreaCustom);}
+/* v76：區域順序可以自己調整（編輯模式的 ▲▼），同步給家人 */
+var eatAreaOrder=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_eat_area_order'));return Array.isArray(v)?v:[];}catch(e){return [];}})();
+function persistEatAreaOrder(){safeSetItem('hokkaido_eat_area_order',eatAreaOrder);}
+function allEatAreas(){
+  const base=[...EAT_AREAS,...eatAreaCustom.filter(x=>!EAT_AREAS.includes(x))];
+  const ord=(eatAreaOrder||[]).filter(a=>base.includes(a));
+  return [...new Set([...ord,...base])];
+}
+function moveEatArea(name,dir){
+  const list=allEatAreas(),i=list.indexOf(name),j=i+dir;
+  if(i<0||j<0||j>=list.length)return;
+  [list[i],list[j]]=[list[j],list[i]];
+  eatAreaOrder=list;persistEatAreaOrder();safeRenderDayContent();
+  setTimeout(()=>{const el=[...document.querySelectorAll('.eatshop-group h3 span')].find(x=>x.textContent===name);el?.closest('.eatshop-group')?.scrollIntoView({behavior:'smooth',block:'center'});},60);
+}
+/* hk11 */
+function isCustomArea(a){return !EAT_AREAS.includes(a);}
 const AREA_ORIGIN={'札幌站周邊':'JRタワーホテル日航札幌','大通・狸小路':'狸小路','札幌其他':'札幌駅','小樽':'OMO5小樽','千歲・支笏湖':'支笏湖'};
 const EAT_DAY_AREA={};
 const EAT_NAME_AREA={};
@@ -3150,11 +3408,11 @@ function persistEatArea(){safeSetItem('hokkaido_eat_area',eatAreaStore);}
 function eatAreaFor(o){
   const ov=eatAreaStore[o.key];
   if(ov==='none')return null;
-  if(ov&&EAT_AREAS.includes(ov))return ov;
+  if(ov&&allEatAreas().includes(ov))return ov;
   const sp=typeof spotByKey==='function'?spotByKey(o.key):null;
   return (sp&&sp.eatArea)||EAT_NAME_AREA[o.name]||EAT_DAY_AREA[o.dayIdx]||null;
 }
-function stayGroups(){return EAT_AREAS.map(a=>({label:a,nav:AREA_ORIGIN[a],dayIdxs:[]}));}
+function stayGroups(){return allEatAreas().map(a=>({label:a,nav:AREA_ORIGIN[a]||a,dayIdxs:[]}));}
 function collectEatShop(kind){
   const cat=kind==='eat'?'food':'shopping';
   return collectSpots(s=>s.cat===cat).map(o=>({...o,area:eatAreaFor(o)})).filter(o=>o.area);
@@ -3162,7 +3420,7 @@ function collectEatShop(kind){
 function editEatArea(key){
   const all=collectSpots(()=>true).find(o=>o.key===key);
   const cur=eatAreaStore[key]||(all?(eatAreaFor(all)||'none'):'none');
-  openFormModal({title:'調整區域：'+(all?all.name:key),fields:[{id:'area',label:'放在哪個區域',type:'select',value:cur,options:[...EAT_AREAS.map(a=>({value:a,label:a})),{value:'none',label:'（不列入吃逛北海道）'}]}],
+  openFormModal({title:'調整區域：'+(all?all.name:key),fields:[{id:'area',label:'放在哪個區域',type:'select',value:cur,options:[...allEatAreas().map(a=>({value:a,label:a})),{value:'none',label:'（不列入吃逛北海道）'}]}],
     onSave:v=>{eatAreaStore[key]=v.area;persistEatArea();safeRenderDayContent();}});
 }
 /* (v52 已改寫) */
@@ -3203,7 +3461,7 @@ function dayWeatherPanelHTML(i){
     const [ico,desc]=wmoInfo(cw.weather_code),temp=Math.round(cw.temperature_2m);
     const tone=temp<=-5?'t-deep':temp<=0?'t-cold':temp<=8?'t-cool':'t-mild';
     const when=e.fetchedAt?new Date(e.fetchedAt).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-    return `<div class="dw-card2 ${tone}"><div class="dw-place2">${escHtml(CITIES[k].label)}${e.stale?'<em>快取</em>':''}</div><div class="dw-main2"><span class="dw-ico2">${ico}</span><b>${temp}°</b></div><div class="dw-desc2">${desc}</div><div class="dw-metrics2"><span>💨 ${cw.wind_speed_10m} km/h</span><span>☔ ${cw.precipitation} mm</span></div>${sunRow}${when?`<small class="dw-when2">更新 ${when}</small>`:''}${tenki}</div>`;
+    return `<div class="dw-card2 ${tone}"><div class="dw-place2">${escHtml(CITIES[k].label)}${e.stale?'<em>快取</em>':''}</div><div class="dw-main2"><span class="dw-ico2">${ico}</span><b>${temp}°</b></div><div class="dw-desc2">${desc}</div><div class="dw-metrics2"><span>💨 ${cw.wind_speed_10m} km/h</span><span>☔ ${cw.precipitation} mm</span></div>${snowLineHTML(k)}${sunRow}${when?`<small class="dw-when2">更新 ${when}</small>`:''}${tenki}</div>`;
   }).join('');
   return `<div class="day-panel dw2"><div class="dw2-head"><div><small>${d.date}（${d.weekday}）</small><strong>今日天氣與穿搭</strong></div><img src="images/nav-weather.webp" alt="" width="64" height="64"></div><div class="dw2-wear"><span class="dw2-wear-ic">🧣</span><div><small>建議穿搭</small><span>${escHtml(d.wear||'')}</span></div></div><div class="dw2-grid${cities.length>1?' two':''}">${cards}</div><button type="button" class="dp-btn" onclick="refreshDayWeather()">更新即時氣象</button><p class="dp-note">日出日落依 ${d.date} 計算；氣溫是「現在」的天氣，出發前 2–3 天再看 tenki.jp 預報。</p><button type="button" class="dp-link" onclick="setTab('weather')">看完整天氣與雨雲圖 ›</button></div>`;
 }
@@ -3326,7 +3584,7 @@ function persistEatPlan(){safeSetItem('hokkaido_eat_plan',eatPlanStore);}
 function eatCustomSpot(c){return S(c.name,c.kind==='shop'?'shopping':'food',c.note||'',{mapQuery:c.mapQuery||null});}
 function spotByKey(key){
   let m=String(key).match(/^d(\d+)-([msc])(\d+)$/);
-  if(m){const di=Number(m[1]),j=Number(m[3]),d=days[di];if(!d)return null;return m[2]==='m'?d.spots[j]:m[2]==='s'?(d.moreSpots||[])[j]:getCustomSpots(di)[j];}
+  if(m){const di=Number(m[1]),j=Number(m[3]),d=days[di];if(!d)return null;return m[2]==='m'?d.spots[j]:m[2]==='s'?(d.moreSpots||[])[j]:((x=>x&&!x.deleted?x:null)(getCustomSpots(di)[j]));}
   m=String(key).match(/^es:(.+)$/);
   if(m){const c=eatShopStore.find(x=>x.id===m[1]);return c?eatCustomSpot(c):null;}
   return null;
@@ -3354,15 +3612,13 @@ function plannedEntriesFor(dayIdx){
   return out;
 }
 function getNaturalList(dayIdx, listType){
-  const d = days[dayIdx];
-  const customSpots = getCustomSpots(dayIdx);
   const cats = listType === 'main' ? MAIN_CATS : LIFE_CATS;
   const hidden = new Set(hiddenFixedSpotsStore[dayIdx] || []);
   const master = masterKeySet();
-  const allFixed = d.spots.map((s,i)=>({spot:s, key:`d${dayIdx}-m${i}`, fixedMeta:{dayIdx}}))
-    .concat((d.moreSpots||[]).map((s,i)=>({spot:s, key:`d${dayIdx}-s${i}`, fixedMeta:{dayIdx}})))
-    .filter(o=>!hidden.has(o.key));
-  const allCustom = customSpots.map((s,i)=>({spot:s, key:`d${dayIdx}-c${i}`, customMeta:{dayIdx, i}}));
+  /* hk11：包含從別天「改日期」搬過來的景點 */
+  const shown = spotsShownOnDay(dayIdx);
+  const allFixed = shown.fixed.filter(o=>!hidden.has(o.key));
+  const allCustom = shown.custom;
   const belongs=(o)=> listType==='life' ? (o.spot.life || cats.includes(o.spot.cat)) : (!o.spot.life && cats.includes(o.spot.cat));
   let result=allFixed.filter(belongs).concat(allCustom.filter(belongs)).filter(o=>!master.has(o.key));
   if(listType==='life'){
@@ -3395,21 +3651,24 @@ function renderEatShopView(kind){
   const items=collectEatShop(kind);
   const custom=eatShopStore.filter(x=>x.kind===kind);
   const used=new Set();
-  const sections=EAT_AREAS.map((a,gi)=>{
+  const sections=allEatAreas().map((a,gi)=>{
     const its=items.filter(it=>it.area===a),cus=custom.filter(c=>c.area===a);
     cus.forEach(c=>used.add(c.id));
-    if(!its.length&&!cus.length)return '';
-    const cards=its.map(it=>gallCardHTML({...it,kind,walkFrom:AREA_ORIGIN[a],areaKey:it.key})).join('')
-      +cus.map(c=>gallCardHTML({key:'es:'+c.id,name:c.name,desc:c.note,nav:c.mapQuery||c.name,kind,walkFrom:AREA_ORIGIN[a],editId:c.id})).join('');
-    return `<section class="eatshop-group" id="eatshop-g${gi}"><h3><span>${escHtml(a)}</span><small>${its.length+cus.length} 個</small></h3><div class="gall-grid">${cards}</div></section>`;
+    const emptyArea=!its.length&&!cus.length;
+    if(emptyArea&&!isCustomArea(a))return '';
+    const cards=its.map(it=>gallCardHTML({...it,kind,walkFrom:(AREA_ORIGIN[a]||a),areaKey:it.key})).join('')
+      +cus.map(c=>gallCardHTML({key:'es:'+c.id,name:c.name,desc:c.note,nav:c.mapQuery||c.name,kind,walkFrom:(AREA_ORIGIN[a]||a),editId:c.id})).join('');
+    const qa=jsQuote(a),nAreas=allEatAreas().length;
+    const ctl=`<span class="edit-only area-ctl">${gi>0?`<button type="button" onclick="moveEatArea('${qa}',-1)" aria-label="往上移">▲ 上移</button>`:''}${gi<nAreas-1?`<button type="button" onclick="moveEatArea('${qa}',1)" aria-label="往下移">▼ 下移</button>`:''}${isCustomArea(a)?`<button type="button" onclick="renameEatArea('${qa}')">改名</button><button type="button" class="del" onclick="deleteEatArea('${qa}')">刪除</button>`:''}</span>`;
+    return `<section class="eatshop-group${emptyArea?' empty-area':''}" id="eatshop-g${gi}"><h3><span>${escHtml(a)}</span><small>${its.length+cus.length} 個</small>${ctl}</h3>${emptyArea?'<div class="dp-empty edit-only">這個區域還沒有項目：按下方「＋ 新增」，或在任一張卡片按「區域」改到這裡。</div>':`<div class="gall-grid">${cards}</div>`}</section>`;
   }).join('');
   const orphan=custom.filter(c=>!used.has(c.id));
   const orphanHTML=orphan.length?`<section class="eatshop-group"><h3><span>我的收藏（未分區）</span></h3><div class="gall-grid">${orphan.map(c=>gallCardHTML({key:'es:'+c.id,name:c.name,desc:c.note,nav:c.mapQuery||c.name,kind,editId:c.id})).join('')}</div></section>`:'';
-  const chips=EAT_AREAS.map((a,gi)=>({a,gi})).filter(({a})=>items.some(it=>it.area===a)||custom.some(c=>c.area===a)).map(({a,gi})=>`<button type="button" onclick="document.getElementById('eatshop-g${gi}')?.scrollIntoView({behavior:'smooth',block:'start'})">${escHtml(a)}</button>`).join('');
+  const chips=allEatAreas().map((a,gi)=>({a,gi})).filter(({a})=>items.some(it=>it.area===a)||custom.some(c=>c.area===a)).map(({a,gi})=>`<button type="button" onclick="document.getElementById('eatshop-g${gi}')?.scrollIntoView({behavior:'smooth',block:'start'})">${escHtml(a)}</button>`).join('');
   dayContent.innerHTML=`<div class="eatshop-hero"><img class="eh-ic" src="${isEat?NAV_IC.food:NAV_IC.shopping}" alt=""><h2>${word}·北海道</h2></div>
     ${chips?`<div class="eatshop-chips">${chips}</div>`:''}
     ${sections||emptyArtHTML('目前沒有候選項目。')}${orphanHTML}
-    <div class="edit-only eatshop-add"><button type="button" onclick="addEatShop('${kind}')">＋ 新增我的${isEat?'私房餐廳':'逛街地點'}</button></div>
+    <div class="edit-only eatshop-add"><button type="button" onclick="addEatShop('${kind}')">＋ 新增我的${isEat?'私房餐廳':'逛街地點'}</button><button type="button" onclick="addEatArea()">＋ 新增區域</button></div>
     <div class="end-mama">${mamaBtnHTML('list-'+kind,'wide')}<small>放不進任何店家的資訊，記在這裡</small></div>`;
 }
 /* 詳情頁：沿用景點卡的完整功能（評論與資訊、上傳照片、修正導航、MaMa…） */
@@ -3523,7 +3782,8 @@ function collectAllImageUrls(){
   [photoStore,coverStore,routeMapStore,foliageMapStore,transportExtrasStore].forEach(walk);
   (customSpotsStore&&Object.values(customSpotsStore)||[]).forEach(arr=>(arr||[]).forEach(s=>{if(s&&isImg(s.img))set.add(s.img);}));
   shopData.forEach(it=>walk([it.img,it.imgs]));
-  rulesData.forEach(r=>walk(r.img));docsData.forEach(d=>walk(d.img));
+  rulesData.forEach(r=>walk([r.img,r.imgs]));
+  if(typeof subSpotStore==='object')walk(subSpotStore);docsData.forEach(d=>walk(d.img));
   surprisesData.forEach(x=>walk(x.img));
   return [...set];
 }
@@ -4027,6 +4287,102 @@ function deleteCustomTransport(dayIdx,id,skip){
   persistTransportCustom();renderDayContent();
   offerUndo('已刪除交通步驟',()=>{(transportCustomStore[dayIdx]=transportCustomStore[dayIdx]||[]).splice(Math.min(i,(transportCustomStore[dayIdx]||[]).length),0,removed);persistTransportCustom();renderDayContent();});
 }
+/* hk11：每段交通直接「導航到目的地」；搭計程車的段落多一個「給司機看」大字卡 */
+function tpDestination(dayIdx,toText,isLast){
+  const raw=String(toText||'').trim();
+  const core=raw.replace(/[（(][^）)]*[）)]/g,'').trim();
+  if(/^(飯店|住宿|旅館|回飯店)$/.test(core)){
+    /* 一天最後一段「回飯店」＝今晚住的；白天中途「回飯店」＝昨晚住的那間 */
+    const tonight=dayStays(dayIdx)[0],lastNight=dayIdx>0?dayStays(dayIdx-1)[0]:null;
+    const st=isLast?(tonight||lastNight):(lastNight||tonight);
+    if(st)return {name:st.name,nav:st.nav};
+  }
+  if(!core)return null;
+  const list=[...getNaturalList(dayIdx,'main'),...getNaturalList(dayIdx,'life'),...(dayIdx>0?getNaturalList(dayIdx-1,'life').filter(o=>o.spot.cat==='hotel'):[])].filter(o=>o.spot&&!o.spot.pool&&o.spot.cat!=='transport');
+  const hit=list.find(o=>{const n=currentFieldValue(o.key,'name',o.spot.name)||o.spot.name;return n===core||n.includes(core)||core.includes(n);});
+  if(hit){const n=currentFieldValue(hit.key,'name',hit.spot.name)||hit.spot.name;return {name:n,nav:currentFieldValue(hit.key,'mapQuery',null)||hit.spot.mapQuery||n};}
+  return {name:core,nav:core};
+}
+function tpTravelMode(mode){
+  const m=String(mode||'');
+  if(/步行|🚶/.test(m))return 'walking';
+  if(/計程車|自駕|開車|🚕|🚗|🚙/.test(m))return 'driving';
+  return 'transit';
+}
+function tpDirLink(nav,travelmode){
+  const v=String(nav||'').trim();
+  if(/^https?:\/\//i.test(v))return v;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(/^[-+]?\d/.test(v)?v:v+' Japan')}&travelmode=${travelmode}`;
+}
+function tpGoButtonsHTML(dayIdx,r,isLast){
+  if(/✈️|航空|飛機/.test(String(r.mode||'')))return '';
+  const dest=tpDestination(dayIdx,r.to,isLast);if(!dest)return '';
+  const tm=tpTravelMode(r.mode);
+  const taxi=/計程車|🚕/.test(String(r.mode||'')+' '+String(r.note||''));
+  return `<div class="tp-go"><a href="${escAttr(tpDirLink(dest.nav,tm))}" target="_blank" rel="noopener">導航到 ${escHtml(dest.name)}</a>${taxi?`<button type="button" data-name="${escAttr(dest.name)}" data-nav="${escAttr(dest.nav)}" onclick="showDriverCard(this.dataset.name,this.dataset.nav)">給司機看</button>`:''}</div>`;
+}
+/* 給司機看的日文資料（日文名稱、在哪裡下車）。可在編輯模式修改，修改會同步給家人。
+   地址只放有確認過的；不確定的就不寫，避免讓司機開錯地方。比對時名稱包含關鍵字即可。 */
+const DRIVER_INFO=[
+  ['水之謌',{ja:'しこつ湖鶴雅リゾートスパ 水の謌',drop:'ホテルの正面入口までお願いします。',dropZh:'到飯店正門口。'}],
+  ['日航札幌',{ja:'JRタワーホテル日航札幌',drop:'札幌駅南口、ホテルの正面入口までお願いします。',dropZh:'到札幌站南口、飯店正門口。'}],
+  ['湖の栖',{ja:'ザ レイクスイート 湖の栖（洞爺湖温泉）',drop:'ホテルの正面入口までお願いします。',dropZh:'到飯店正門口。'}],
+  ['OMO5',{ja:'OMO5小樽 by 星野リゾート',drop:'ホテルの正面入口までお願いします。',dropZh:'到飯店正門口。'}],
+  ['山鄉春',{drop:'宿の入口までお願いします。',dropZh:'到住宿入口。'}],
+  ['新千歲',{ja:'新千歳空港',drop:'国際線ターミナルでお願いします。',dropZh:'到國際線航廈。'}],
+  ['北海道廳',{ja:'北海道庁旧本庁舎（赤れんが庁舎）'}],
+  ['莫埃來沼',{ja:'モエレ沼公園',drop:'ガラスのピラミッドの近くの駐車場でお願いします。',dropZh:'到玻璃金字塔附近的停車場。'}],
+  ['場外市場',{ja:'札幌場外市場'}],
+  ['三上商店',{ja:'マルサン三上商店（札幌場外市場）'}],
+  ['花窗玻璃',{ja:'小樽芸術村 ステンドグラス美術館'}],
+  ['鱗友朝市',{ja:'鱗友朝市（小樽）'}],
+  ['堺町',{ja:'小樽 堺町通り'}],
+  ['圓山公園',{ja:'円山公園'}],
+  ['北海道神宮',{ja:'北海道神宮'}],
+  ['中島公園',{ja:'中島公園'}],
+  ['藻岩山',{ja:'もいわ山ロープウェイ 山麓駅',drop:'もいわ山ロープウェイの山麓駅でお願いします。',dropZh:'到藻岩山纜車山麓站。'}],
+  ['有珠山',{ja:'有珠山ロープウェイ 山麓駅'}],
+  ['白色戀人',{ja:'白い恋人パーク'}],
+  ['洞爺湖溫泉',{ja:'洞爺湖温泉'}],
+  ['札幌站',{ja:'JR札幌駅'}],
+  ['南小樽',{ja:'JR南小樽駅'}],
+  ['小樽站',{ja:'JR小樽駅'}],
+  ['錢函站',{ja:'JR銭函駅'}],
+  ['千歲站',{ja:'JR千歳駅'}]
+];
+const DRIVER_FIELDS=['ja','addr','drop','dropZh'];
+function driverInfo(name){
+  const hit=DRIVER_INFO.find(([k])=>String(name).includes(k));
+  const base=hit?hit[1]:{};const key='drv:'+name,out={};
+  DRIVER_FIELDS.forEach(f=>{const v=currentFieldValue(key,f,base[f]||null);if(v)out[f]=v;});
+  return out;
+}
+function showDriverCard(name,nav){
+  document.getElementById('driverCard')?.remove();
+  const info=driverInfo(name);
+  const el=document.createElement('div');el.id='driverCard';el.className='driver-card';
+  el.innerHTML=`<div class="driver-card-inner">
+    <p class="driver-ja">ここまでお願いします</p><p class="driver-zh">（請載我到這裡）</p>
+    <div class="driver-name${String(info.ja||name).length>12?' long':''}">${escHtml(info.ja||name)}</div>${info.ja&&info.ja!==name?`<div class="driver-name-zh">${escHtml(name)}</div>`:''}
+    ${info.addr?`<div class="driver-addr"><small>住所</small>${escHtml(info.addr)}</div>`:''}
+    ${info.drop?`<div class="driver-drop"><small>降りる場所</small><b>${escHtml(info.drop)}</b>${info.dropZh?`<span>${escHtml(info.dropZh)}</span>`:''}</div>`:''}
+    <a class="driver-map" href="${escAttr(mapsLink(nav))}" target="_blank" rel="noopener">打開地圖給司機看</a>
+    <button type="button" class="driver-edit edit-only">修改日文名稱／下車地點</button>
+    <button type="button" class="driver-close">關閉</button></div>`;
+  el.querySelector('.driver-close').onclick=()=>el.remove();
+  el.querySelector('.driver-edit').onclick=()=>{el.remove();editDriverInfo(name,nav);};
+  el.addEventListener('click',e=>{if(e.target===el)el.remove();});
+  document.body.appendChild(el);
+}
+function editDriverInfo(name,nav){
+  const info=driverInfo(name),key='drv:'+name;
+  openFormModal({title:'給司機看：'+name,fields:[
+    {id:'ja',label:'日文名稱（司機看的大字）',value:info.ja||'',placeholder:'例：JRタワーホテル日航札幌'},
+    {id:'addr',label:'日文地址（選填）',value:info.addr||''},
+    {id:'drop',label:'在哪裡下車（日文，給司機看）',type:'textarea',rows:2,value:info.drop||'',placeholder:'例：正面入口までお願いします。'},
+    {id:'dropZh',label:'在哪裡下車（中文，給自己看）',type:'textarea',rows:2,value:info.dropZh||''}],saveText:'儲存',
+    onSave:v=>{DRIVER_FIELDS.forEach(f=>{fieldOverrideStore[fieldOverrideKey(key,f)]=v[f]||'';});persistFieldOverrides();showDriverCard(name,nav);}});
+}
 function transportAddBarHTML(dayIdx){
   return `<div class="tp-add edit-only"><button type="button" onclick="addTransportStep(${dayIdx})">＋ 新增交通步驟</button></div>${transportSegmentExtrasHTML(dayIdx,'panel')}`;
 }
@@ -4062,6 +4418,166 @@ function dayIconHTML(dayIdx,emoji){
   const img=DAY_ICON_IMG[dayIdx];
   if(img)return `<img src="${img}" alt="" loading="lazy">`;
   return dayIconSVG(emoji);
+}
+
+
+/* =====================================================================
+   hk11：移植自京丹雅行 v73–v76——評論多行編輯、吃逛自訂區域與排序、副景點（含照片）、景點改日期
+   ===================================================================== */
+function editBuiltInInfo(key){
+  const fallback=window._spotCustomInfoOriginals[key]||null;
+  const current=currentBuiltInInfo(key,fallback);
+  openFormModal({title:'修改評論與資訊',fields:[{id:'t',label:'內容（可以換行、貼上長文字）',type:'textarea',rows:12,value:String(current==null?'':current).replace(/<br\s*\/?>/gi,'\n')}],saveText:'儲存',
+    onSave:v=>{infoOverrideStore[key]=v.t.trim()||null;persistInfoOverrides();renderDayContent();reopenCard(key);},
+    onDelete:()=>{deleteBuiltInInfo(key);}});
+}
+function editNote(key,noteIdx){
+  if(!notesStore[key]||typeof notesStore[key][noteIdx]==='undefined')return;
+  openFormModal({title:'修改評論與資訊',fields:[{id:'t',label:'內容（可以換行、貼上長文字）',type:'textarea',rows:12,value:notesStore[key][noteIdx]}],saveText:'儲存',
+    onSave:v=>{if(!v.t){alert('內容不能是空的；要刪掉請按「刪除」。');return false;}notesStore[key][noteIdx]=v.t;persistNotes();renderDayContent();reopenCard(key);},
+    onDelete:()=>{deleteNote(key,noteIdx);}});
+}
+
+/* ---------- 吃·逛北海道：自訂區域 ---------- */
+function addEatArea(){
+  openFormModal({title:'新增區域',fields:[{id:'name',label:'區域名稱（例如：二條市場、薄野、小樽運河）',value:''}],saveText:'新增',
+    onSave:v=>{
+      if(!v.name){alert('請輸入區域名稱');return false;}
+      if(allEatAreas().includes(v.name)){alert('已經有同名的區域了');return false;}
+      eatAreaCustom.push(v.name);persistEatAreaCustom();
+      if(v.origin){AREA_ORIGIN[v.name]=v.origin;const o=readAreaOrigins();o[v.name]=v.origin;try{localStorage.setItem('hokkaido_area_origin',JSON.stringify(o));}catch(e){}}
+      safeRenderDayContent();
+    }});
+}
+function readAreaOrigins(){try{return JSON.parse(localStorage.getItem('hokkaido_area_origin'))||{};}catch(e){return {};}}
+Object.assign(AREA_ORIGIN,readAreaOrigins());
+function renameEatArea(name){
+  openFormModal({title:'區域改名',fields:[{id:'name',label:'新的區域名稱',value:name}],saveText:'儲存',
+    onSave:v=>{
+      if(!v.name){alert('請輸入名稱');return false;}
+      if(v.name!==name&&allEatAreas().includes(v.name)){alert('已經有同名的區域了');return false;}
+      eatAreaCustom=eatAreaCustom.map(x=>x===name?v.name:x);persistEatAreaCustom();
+      if(eatAreaOrder.includes(name)){eatAreaOrder=eatAreaOrder.map(x=>x===name?v.name:x);persistEatAreaOrder();}
+      Object.keys(eatAreaStore).forEach(k=>{if(eatAreaStore[k]===name)eatAreaStore[k]=v.name;});persistEatArea();
+      eatShopStore.forEach(c=>{if(c.area===name)c.area=v.name;});persistEatShop();
+      if(AREA_ORIGIN[name]){AREA_ORIGIN[v.name]=AREA_ORIGIN[name];delete AREA_ORIGIN[name];}
+      safeRenderDayContent();
+    }});
+}
+function deleteEatArea(name){
+  if(!confirm(`刪除「${name}」這個區域？裡面的項目不會被刪掉，會移到「未分區」。`))return;
+  eatAreaCustom=eatAreaCustom.filter(x=>x!==name);persistEatAreaCustom();
+  safeRenderDayContent();
+}
+
+/* ---------- 副景點：在景點卡片展開後，可再新增掛在底下的小景點 ---------- */
+let subSpotStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_sub_spots'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
+function persistSubSpots(){safeSetItem('hokkaido_sub_spots',subSpotStore);}
+function subSpotsFor(key){return Array.isArray(subSpotStore[key])?subSpotStore[key]:[];}
+function subSpotFields(r){return [
+  {id:'name',label:'副景點名稱（必填）',value:r.name||'',placeholder:'例：六花亭 神宮茶屋'},
+  {id:'dur',label:'建議停留時間（選填）',value:r.dur||'',placeholder:'例：約 40 分鐘'},
+  {id:'note',label:'介紹／備註（選填，可換行）',type:'textarea',rows:6,value:r.note||'',placeholder:'例：境內茶屋可以吃剛烤好的判官餅，冬天限定。'},
+  {id:'nav',label:'導航位置（選填：Google 地圖網址、地址或座標；留空＝用名稱搜尋）',value:r.nav||''},
+  {id:'files',label:(r.imgs&&r.imgs.length?`照片（目前 ${r.imgs.length} 張；選擇的照片會再加上去，可一次選多張）`:'照片（選填，可一次選多張）'),type:'files'}];}
+async function uploadSubSpotFiles(files){
+  const urls=[];
+  for(const f of files||[]){try{urls.push(await uploadMediaFile(f,'sub-spots'));}catch(err){reportUploadError(err);break;}}
+  return urls;
+}
+function subSpotImgsHTML(key,r){
+  const imgs=Array.isArray(r.imgs)?r.imgs:[];
+  const q=jsQuote(key);
+  const th=imgs.map((u,i)=>`<div class="sub2-ph"><img src="${escAttr(u)}" data-src="${escAttr(u)}" alt="" loading="lazy" onclick="event.stopPropagation();openAttachModal(this.dataset.src)"><button type="button" class="edit-only" aria-label="移除這張照片" onclick="event.stopPropagation();removeSubSpotImg('${q}','${r.id}',${i})">✕</button></div>`).join('');
+  const add=`<label class="sub2-ph-add edit-only" onclick="event.stopPropagation()">＋ 照片<input type="file" accept="image/*" multiple hidden onchange="addSubSpotImgs(event,'${q}','${r.id}')"></label>`;
+  return `<div class="sub2-phs${imgs.length?'':' no-img'}">${th}${add}</div>`;
+}
+async function addSubSpotImgs(e,key,id){
+  const files=[...(e.target.files||[])];e.target.value='';if(!files.length)return;
+  updateSyncStatus(null,'saving');
+  const urls=await uploadSubSpotFiles(files);if(!urls.length)return;
+  const r=subSpotsFor(key).find(x=>x.id===id);if(!r)return;
+  r.imgs=[...(Array.isArray(r.imgs)?r.imgs:[]),...urls];persistSubSpots();afterSubSpotChange(key);
+}
+function removeSubSpotImg(key,id,i){
+  const r=subSpotsFor(key).find(x=>x.id===id);if(!r||!Array.isArray(r.imgs))return;
+  if(!confirm('移除這張照片？（5 秒內可復原）'))return;
+  const removed=r.imgs.splice(i,1)[0];persistSubSpots();afterSubSpotChange(key);
+  offerUndo('已移除照片',()=>{const t=subSpotsFor(key).find(x=>x.id===id);if(!t)return;t.imgs=Array.isArray(t.imgs)?t.imgs:[];t.imgs.splice(Math.min(i,t.imgs.length),0,removed);persistSubSpots();afterSubSpotChange(key);});
+}
+function subSpotsHTML(idx){
+  const list=subSpotsFor(idx);
+  const q=jsQuote(idx);
+  const items=list.map(r=>`<div class="sub2"><div class="sub2-main"><b>${escHtml(r.name)}</b>${r.dur?`<span class="sub2-dur">${escHtml(r.dur)}</span>`:''}${r.note?`<p>${escHtml(r.note)}</p>`:''}${subSpotImgsHTML(idx,r)}</div><div class="sub2-acts"><a class="sub2-nav" href="${escAttr(mapsLink(r.nav||r.name))}" target="_blank" rel="noopener" onclick="event.stopPropagation()">導航</a><span class="edit-only sub2-edit"><button type="button" onclick="event.stopPropagation();editSubSpot('${q}','${r.id}')">編輯</button><button type="button" class="del" onclick="event.stopPropagation();deleteSubSpot('${q}','${r.id}')">刪除</button></span></div></div>`).join('');
+  if(!items)return `<div class="subspots edit-only" onclick="event.stopPropagation()"><button type="button" class="subspots-add" onclick="event.stopPropagation();addSubSpot('${q}')">＋ 新增副景點</button></div>`;
+  return `<div class="subspots" onclick="event.stopPropagation()"><div class="subspots-head"><b>副景點</b><em>${list.length}</em></div>${items}<button type="button" class="subspots-add edit-only" onclick="event.stopPropagation();addSubSpot('${q}')">＋ 新增副景點</button></div>`;
+}
+function afterSubSpotChange(key){renderDayContent();reopenCard(key);if(document.getElementById('spotDetailSheet'))renderSpotDetail(false);}
+function addSubSpot(key){
+  const parent=(spotByKey(key)||{}).name||'';
+  openFormModal({title:'新增副景點'+(parent?'：'+parent:''),fields:subSpotFields({}),saveText:'新增',
+    onSave:v=>{
+      if(!v.name){alert('請輸入副景點名稱');return false;}
+      return (async()=>{
+        const imgs=v.files&&v.files.length?await uploadSubSpotFiles(v.files):[];
+        (subSpotStore[key]=subSpotStore[key]||[]).push({id:newItemId('ss'),name:v.name,dur:v.dur,note:v.note,nav:v.nav,imgs});
+        persistSubSpots();afterSubSpotChange(key);
+      })();
+    }});
+}
+function editSubSpot(key,id){
+  const r=subSpotsFor(key).find(x=>x.id===id);if(!r)return;
+  openFormModal({title:'編輯副景點',fields:subSpotFields(r),saveText:'儲存',
+    onSave:v=>{if(!v.name){alert('名稱不能是空的');return false;}
+      return (async()=>{
+        const add=v.files&&v.files.length?await uploadSubSpotFiles(v.files):[];
+        const cur=subSpotsFor(key).find(x=>x.id===id)||r;
+        Object.assign(cur,{name:v.name,dur:v.dur,note:v.note,nav:v.nav,imgs:[...(Array.isArray(cur.imgs)?cur.imgs:[]),...add]});persistSubSpots();afterSubSpotChange(key);
+      })();},
+    onDelete:()=>deleteSubSpot(key,id,true)});
+}
+function deleteSubSpot(key,id,skipConfirm){
+  const arr=subSpotsFor(key),i=arr.findIndex(x=>x.id===id);if(i<0)return;
+  if(!skipConfirm&&!confirm(`刪除副景點「${arr[i].name}」？（5 秒內可復原）`))return;
+  const removed=arr.splice(i,1)[0];if(!arr.length)delete subSpotStore[key];
+  persistSubSpots();afterSubSpotChange(key);
+  offerUndo('已刪除副景點',()=>{(subSpotStore[key]=subSpotStore[key]||[]).splice(Math.min(i,(subSpotStore[key]||[]).length),0,removed);persistSubSpots();afterSubSpotChange(key);});
+}
+
+/* ---------- 景點改日期 ---------- */
+var spotDayStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_spot_day'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
+function persistSpotDay(){safeSetItem('hokkaido_spot_day',spotDayStore);}
+function naturalDayOf(key){const m=String(key).match(/^d(\d+)-[msc]\d+$/);return m&&days[Number(m[1])]?Number(m[1]):null;}
+function spotDayOf(key){
+  const v=(spotDayStore||{})[key];
+  if(typeof v==='number'&&days[v])return v;
+  return naturalDayOf(key);
+}
+function isSpotMoved(key){const n=naturalDayOf(key),e=spotDayOf(key);return n!=null&&e!==n;}
+/* 所有「放在 dayIdx 這天」的內建與自訂景點（含從別天移過來的） */
+function spotsShownOnDay(dayIdx){
+  const fixed=[],custom=[];
+  days.forEach((d,di)=>{
+    d.spots.forEach((s,i)=>{const key=`d${di}-m${i}`;if(spotDayOf(key)===dayIdx)fixed.push({spot:s,key,fixedMeta:{dayIdx}});});
+    (d.moreSpots||[]).forEach((s,i)=>{const key=`d${di}-s${i}`;if(spotDayOf(key)===dayIdx)fixed.push({spot:s,key,fixedMeta:{dayIdx}});});
+    getCustomSpots(di).forEach((s,i)=>{const key=`d${di}-c${i}`;if(!s.deleted&&spotDayOf(key)===dayIdx)custom.push({spot:s,key,customMeta:{dayIdx:di,i}});});
+  });
+  return {fixed,custom};
+}
+function openSpotDayModal(key){
+  const spot=spotByKey(key);if(!spot)return;
+  const cur=spotDayOf(key),nat=naturalDayOf(key);
+  const name=currentFieldValue(key,'name',spot.name)||spot.name;
+  openFormModal({title:'改日期：'+name,fields:[{id:'day',label:'要放在哪一天？（筆記、照片、評論都會一起搬過去）',type:'select',value:String(cur),options:days.map((d,i)=>({value:String(i),label:`D${d.dayNum}・${d.date}（週${d.weekday}）${d.title}${i===nat?'　← 原本':''}`}))}],saveText:'搬過去',
+    onSave:v=>{
+      const to=Number(v.day);if(!days[to]||to===cur)return;
+      const prev=Object.prototype.hasOwnProperty.call(spotDayStore,key)?spotDayStore[key]:undefined;
+      if(to===nat)delete spotDayStore[key];else spotDayStore[key]=to;
+      persistSpotDay();
+      if(hiddenFixedSpotsStore[to]&&hiddenFixedSpotsStore[to].includes(key)){hiddenFixedSpotsStore[to]=hiddenFixedSpotsStore[to].filter(k=>k!==key);persistHiddenFixedSpots();}
+      renderDayChips();renderDayContent();updateSpotCount&&updateSpotCount();
+      offerUndo(`已把「${name}」搬到 D${days[to].dayNum}・${days[to].date}`,()=>{if(prev===undefined)delete spotDayStore[key];else spotDayStore[key]=prev;persistSpotDay();renderDayChips();renderDayContent();});
+    }});
 }
 
 /* ---- 初次渲染 ---- */
