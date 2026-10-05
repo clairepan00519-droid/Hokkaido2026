@@ -195,7 +195,8 @@ document.addEventListener('DOMContentLoaded',()=>{
    不依賴外部 Supabase SDK 或 Realtime WebSocket，避免 CDN／WebSocket
    在手機、公司或醫院網路被攔截。每 12 秒檢查一次家人更新。 */
 /* ▼▼▼ 新 Supabase 專案建立後，把下面兩行換成「Project Settings → API」裡的 URL 與 anon public key ▼▼▼ */
-const SUPABASE_URL = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_URL||"").trim().replace(/\/+$/,"");
+/* 只取 https://xxxx.supabase.co 這一段：就算貼成 …/rest/v1/ 或 …/auth/v1 也能正常登入 */
+const SUPABASE_URL = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_URL||"").trim().replace(/\/+$/,"").replace(/\/(rest|auth|storage)\/v1(\/.*)?$/i,"").replace(/\/+$/,"");
 const SUPABASE_ANON_KEY = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_ANON_KEY||"").trim();
 /* ▲▲▲ 兩行都留空時，網站以「單機預覽模式」運作：不需登入、資料只存在這台裝置 ▲▲▲ */
 const CLOUD_CONFIGURED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
@@ -2709,7 +2710,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk10-2026-10-04';
+const APP_VERSION='hk11-2026-10-05';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
