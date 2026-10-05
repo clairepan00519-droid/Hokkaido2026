@@ -1380,7 +1380,7 @@ function renderDayChips(){
     +`<div class="day-chip special-chip ${activeDay==='eat'?'active':''}" onclick="setActiveDay('eat')"><div class="d"><img class="chip-ic" src="images/nav-food.webp" alt=""></div><div class="m">吃·北海道</div></div>`
     +`<div class="day-chip special-chip ${activeDay==='shop'?'active':''}" onclick="setActiveDay('shop')"><div class="d"><img class="chip-ic" src="images/nav-shopping.webp" alt=""></div><div class="m">逛·北海道</div></div>`
     +days.map((d,i)=>`
-    <div class="day-chip ${i===activeDay?'active':''} ${i===today?'is-today':''}" data-i="${i}" onclick="setActiveDay(${i})">
+    <div class="day-chip ${i===activeDay?'active':''} ${i===today?'is-today':''}${daySnowy(i)?' snowy':''}" data-i="${i}"${daySnowy(i)?' title="預報大雪或強風"':''} onclick="setActiveDay(${i})">
       <div class="d">${d.date}</div>
       <div class="m">週${d.weekday}</div>
     </div>`).join('');
@@ -1727,6 +1727,7 @@ function renderDayContent(){
       ${d.dayDesc ? `<h2>${d.dayDesc}</h2>` : ''}
       <div class="weather-strip"><div class="ico${DAY_ICON_IMG[activeDay]!==undefined?' img-ico':''}">${dayIconHTML(activeDay,d.weatherIco)}</div><div class="txt"><b style="font-family:'Zen Kaku Gothic New', sans-serif; font-size:14px;">${d.enRegion}</b><br><span style="font-size:11.5px; opacity:0.85;">${d.wear}</span></div></div>
       ${stayQuickHTML}
+      <div id="daySnowSlot">${daySnowBannerHTML(activeDay)}</div>
     </div>
     <div id="day-card-${activeDay}">
       <div class="subtab-content${['weather','transport','routemap','eat'].includes(curSubTab)?'':' active'}" data-type="spots">
@@ -1947,6 +1948,159 @@ function renderOneLiveCity(k){
   `;
 }
 
+
+/* ============ hk11：今日雪況＋降雪提醒（Open-Meteo 預報；積雪為模型估計） ============
+   - 天氣頁：各地「現在積雪／過去 24 小時新雪／接下來 12 小時降雪／路面」＋提醒
+   - 每日行程：這天走訪地區的降雪預報（出發前 16 天內才有），當天另顯示接下來幾小時
+   - 日期晶片：預報大雪或暴風雪的日子出現小雪花 */
+const SNOW_CACHE_KEY='hokkaido_snow_v1';
+let snowCache=(()=>{try{return JSON.parse(localStorage.getItem(SNOW_CACHE_KEY))||{};}catch(e){return {};}})();
+const SNOW_ICON='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5M2.8 9.6l3.4.9-.9 3.4M21.2 14.4l-3.4-.9.9-3.4M2.8 14.4l3.4-.9-.9-3.4M21.2 9.6l-3.4.9.9 3.4"/></svg>';
+function tokyoHourISO(d=new Date()){
+  const t=new Date(d.getTime()+9*3600*1000);
+  return t.toISOString().slice(0,13)+':00';
+}
+function dayISO(dayIdx){const [m,dd]=String(days[dayIdx].date).split('/').map(Number);return `2027-${String(m).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;}
+async function fetchSnowFor(k,force){
+  if(!navigator.onLine)return false;
+  const c=snowCache[k];if(!force&&c&&Date.now()-c.at<20*60*1000)return false;
+  const {lat,lon}=CITIES[k];
+  try{
+    const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=snowfall,snow_depth,temperature_2m,wind_gusts_10m&daily=snowfall_sum,temperature_2m_min,temperature_2m_max,wind_gusts_10m_max&past_days=1&forecast_days=16&timezone=Asia%2FTokyo`);
+    if(!r.ok)return false;
+    const d=await r.json();if(!d||!d.hourly||!d.daily)return false;
+    const now=tokyoHourISO();let i0=d.hourly.time.indexOf(now);if(i0<0)i0=Math.max(0,d.hourly.time.findIndex(t=>t>now)-1);
+    const from=Math.max(0,i0-24),to=i0+48,sl=a=>(a||[]).slice(from,to);
+    snowCache[k]={at:Date.now(),
+      hourly:{time:sl(d.hourly.time),snow:sl(d.hourly.snowfall),depth:sl(d.hourly.snow_depth),temp:sl(d.hourly.temperature_2m),gust:sl(d.hourly.wind_gusts_10m)},
+      daily:{time:d.daily.time,snow:d.daily.snowfall_sum||[],tmin:d.daily.temperature_2m_min||[],tmax:d.daily.temperature_2m_max||[],gust:d.daily.wind_gusts_10m_max||[]}};
+    try{localStorage.setItem(SNOW_CACHE_KEY,JSON.stringify(snowCache));}catch(e){}
+    return true;
+  }catch(e){return false;}
+}
+async function prefetchSnow(force){
+  const res=await Promise.all(Object.keys(CITIES).map(k=>fetchSnowFor(k,force)));
+  if(res.some(Boolean)||force)onSnowUpdated();
+}
+function onSnowUpdated(){
+  try{renderSnowPanel();}catch(e){}
+  try{const slot=document.getElementById('daySnowSlot');if(slot&&typeof activeDay==='number')slot.innerHTML=daySnowBannerHTML(activeDay);}catch(e){}
+  try{if(typeof renderDayChips==='function')renderDayChips();}catch(e){}
+}
+const sum_=a=>a.reduce((x,y)=>x+(Number(y)||0),0);
+/* 一個地點「現在」的雪況 */
+function snowNow(k){
+  const c=snowCache[k];if(!c||!c.hourly||!c.hourly.time.length)return null;
+  const h=c.hourly,now=tokyoHourISO();
+  let i=h.time.indexOf(now);if(i<0)i=Math.max(0,h.time.findIndex(t=>t>now)-1);
+  if(i<0)return null;
+  const past=sum_(h.snow.slice(Math.max(0,i-24),i)),next12=sum_(h.snow.slice(i,i+12)),next24=sum_(h.snow.slice(i,i+24));
+  const depthM=h.depth[i];const depth=depthM==null?null:Math.round(depthM*100);
+  const temps=h.temp.slice(Math.max(0,i-24),i+12).filter(v=>v!=null);
+  const tmin=temps.length?Math.min(...temps):null,tmax=temps.length?Math.max(...temps):null;
+  const gust=Math.max(0,...h.gust.slice(i,i+12).filter(v=>v!=null));
+  let startIn=null;for(let j=i;j<Math.min(h.time.length,i+12);j++){if((Number(h.snow[j])||0)>=0.2){startIn=j-i;break;}}
+  return {past,next12,next24,depth,tmin,tmax,gust,startIn,temp:h.temp[i],at:c.at};
+}
+/* 路面狀況：融雪又結冰最滑；新雪後隔天也滑 */
+function roadHint(s){
+  if(!s)return '';
+  const snowy=(s.depth||0)>0||s.past>=0.5||s.next12>=0.5;
+  if(snowy&&s.tmin!=null&&s.tmax!=null&&s.tmin<0&&s.tmax>-1)return '融雪又結冰，路面非常滑：穿防滑鞋、加冰爪，走路步伐放小。';
+  if(s.past>=3)return '昨晚到今天有新雪，人行道雪多難走，坡道與斑馬線特別滑。';
+  if(snowy&&s.tmin!=null&&s.tmin<=-8)return '天氣嚴寒，路面是乾冷的壓雪，相對好走，但手腳容易凍，暖暖包貼好。';
+  if(snowy)return '路面有積雪，穿防滑鞋，進出店家注意門口的結冰。';
+  return '目前沒有明顯積雪。';
+}
+function fmtCm(v){v=Number(v)||0;return v<0.5?'0':v<10?v.toFixed(1).replace(/\.0$/,''):String(Math.round(v));}
+/* 某天（行程日）的降雪預報 */
+function dailySnow(k,iso){
+  const c=snowCache[k];if(!c||!c.daily)return null;
+  const i=c.daily.time.indexOf(iso);if(i<0)return null;
+  return {snow:Number(c.daily.snow[i])||0,tmin:c.daily.tmin[i],tmax:c.daily.tmax[i],gust:Number(c.daily.gust[i])||0};
+}
+function daySnowInfo(dayIdx){
+  const iso=dayISO(dayIdx);let best=null;
+  (DAY_CITIES[dayIdx]||['Sapporo']).forEach(k=>{const r=dailySnow(k,iso);if(r&&(!best||r.snow>best.snow||(r.snow===best.snow&&r.gust>best.gust)))best={...r,city:CITIES[k].label};});
+  return best;
+}
+function snowLevel(r){if(!r)return 0;if(r.snow>=10||(r.snow>=3&&r.gust>=50))return 2;if(r.snow>=1)return 1;return 0;}
+function daySnowy(i){try{return snowLevel(daySnowInfo(i))>=2;}catch(e){return false;}}
+function snowAdvice(r){
+  const out=[];
+  if(r.snow>=10)out.push('大雪：JR、巴士與機場聯外交通容易延誤或停駛，移動日請預留時間，出門前查運行狀況。');
+  else if(r.snow>=3)out.push('會下雪：路面積雪變多，走路與搭車都多留一點時間。');
+  if(r.gust>=50&&r.snow>=1)out.push('陣風強，可能有地吹雪／暴風雪，視線差；纜車、展望台可能停駛。');
+  else if(r.gust>=50)out.push('陣風很強，纜車與展望台可能停駛，體感溫度會更低。');
+  if(r.tmin!=null&&r.tmin<=-10)out.push(`最低約 ${Math.round(r.tmin)}°C，夜間活動（祭典、夜景）要全副武裝。`);
+  return out;
+}
+function daySnowBannerHTML(dayIdx){try{return daySnowBannerHTML_(dayIdx);}catch(e){return '';}}
+function daySnowBannerHTML_(dayIdx){
+  if(typeof dayIdx!=='number'||!days[dayIdx])return '';
+  const lines=[];let lv=0;
+  const r=daySnowInfo(dayIdx);
+  if(r){lv=snowLevel(r);
+    if(r.snow>=1)lines.push(`預報這天降雪約 <b>${fmtCm(r.snow)} cm</b>（${escHtml(r.city)}）${r.tmin!=null?`，氣溫 ${Math.round(r.tmin)}～${Math.round(r.tmax)}°C`:''}。`);
+    snowAdvice(r).forEach(x=>lines.push(escHtml(x)));
+  }
+  if(dayIdx===tripTodayIndex()){
+    (DAY_CITIES[dayIdx]||['Sapporo']).forEach(k=>{const s=snowNow(k);if(!s)return;
+      const parts=[];
+      if(s.depth!=null)parts.push(`積雪約 ${s.depth} cm`);
+      if(s.past>=0.5)parts.push(`過去 24 小時新雪 ${fmtCm(s.past)} cm`);
+      if(s.next12>=0.5)parts.push(`${s.startIn<=0?'現在到':s.startIn+' 小時後起'} 12 小時內再下 ${fmtCm(s.next12)} cm`);
+      if(parts.length)lines.push(`<b>${escHtml(CITIES[k].label)}今日雪況</b>：${parts.join('，')}。${escHtml(roadHint(s))}`);
+      if(s.next12>=5)lv=Math.max(lv,2);
+    });
+  }
+  if(!lines.length)return '';
+  return `<div class="snow-banner${lv>=2?' heavy':''}">${SNOW_ICON}<div><b>${lv>=2?'大雪提醒':'降雪提醒'}</b>${lines.map(x=>`<p>${x}</p>`).join('')}</div></div>`;
+}
+function ensureSnowForDay(){
+  Promise.all(Object.keys(CITIES).map(k=>fetchSnowFor(k,false))).then(r=>{if(r.some(Boolean))onSnowUpdated();}).catch(()=>{});
+}
+/* 天氣頁：今日雪況（各地卡片）＋提醒 */
+function renderSnowPanel(){
+  const box=document.getElementById('snowAlertBox'),list=document.getElementById('snowNowList'),time=document.getElementById('snowNowTime');
+  if(!box||!list)return;
+  const keys=Object.keys(CITIES);
+  if(!keys.some(k=>snowCache[k])){
+    list.innerHTML=`<div class="snow-empty">${navigator.onLine?'讀取雪況中…':'目前離線，連上網路後會自動讀取雪況。'}</div>`;box.innerHTML='';return;
+  }
+  list.innerHTML=keys.map(k=>{
+    const s=snowNow(k);
+    if(!s)return `<div class="snow-city"><div class="snow-city-head"><strong>${escHtml(CITIES[k].label)}</strong></div><div class="snow-empty">尚無資料</div></div>`;
+    const hot=s.next12>=5?' heavy':s.next12>=0.5?' on':'';
+    return `<div class="snow-city${hot}">
+      <div class="snow-city-head"><strong>${escHtml(CITIES[k].label)}</strong>${s.temp!=null?`<span>${Math.round(s.temp)}°C</span>`:''}</div>
+      <div class="snow-stats">
+        <div><small>積雪</small><b>${s.depth==null?'—':s.depth}<i>cm</i></b></div>
+        <div><small>過去24h新雪</small><b>${fmtCm(s.past)}<i>cm</i></b></div>
+        <div><small>接下來12h</small><b>${fmtCm(s.next12)}<i>cm</i></b></div>
+      </div>
+      ${s.next12>=0.5?`<div class="snow-when">❄ ${s.startIn<=0?'現在或馬上':s.startIn+' 小時後'}開始下雪${s.gust>=50?`，陣風 ${Math.round(s.gust)} km/h`:''}</div>`:''}
+      <div class="snow-road"><b>路面</b><span>${escHtml(roadHint(s))}</span></div>
+    </div>`;
+  }).join('');
+  /* 提醒：接下來 12 小時有雪的地點＋行程日預報大雪 */
+  let html='';
+  const soon=keys.map(k=>({k,s:snowNow(k)})).filter(x=>x.s&&x.s.next12>=0.5);
+  if(soon.length)html+=`<div class="snow-banner${soon.some(x=>x.s.next12>=5)?' heavy':''}">${SNOW_ICON}<div><b>接下來 12 小時會下雪</b><ul>${soon.map(x=>`<li>${escHtml(CITIES[x.k].label)}：${x.s.startIn<=0?'現在或馬上':x.s.startIn+' 小時後'}起，約 ${fmtCm(x.s.next12)} cm${x.s.next12>=5?'（大雪，交通可能延誤）':''}</li>`).join('')}</ul></div></div>`;
+  const trip=days.map((d,i)=>({i,r:daySnowInfo(i)})).filter(x=>x.r&&x.r.snow>=1);
+  if(trip.length)html+=`<div class="snow-banner trip">${SNOW_ICON}<div><b>行程日降雪預報</b><ul>${trip.map(x=>`<li${snowLevel(x.r)>=2?' class="heavy"':''}>D${days[x.i].dayNum}（${days[x.i].date}）${escHtml(x.r.city)}：約 ${fmtCm(x.r.snow)} cm${snowLevel(x.r)>=2?'・大雪／強風':''}</li>`).join('')}</ul></div></div>`;
+  if(!html)html=`<div class="snow-banner ok">${SNOW_ICON}<div><b>降雪提醒</b><p>各地接下來 12 小時沒有明顯降雪。出發前 16 天內，行程日的降雪預報會自動顯示在這裡和每天的行程頁。</p></div></div>`;
+  box.innerHTML=html;
+  if(time){const ts=keys.map(k=>snowCache[k]&&snowCache[k].at).filter(Boolean);time.textContent=ts.length?`雪況更新：${new Date(Math.min(...ts)).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}・積雪為 Open-Meteo 模型估計，實際以現場為準`:'';}
+}
+/* 每日天氣卡片裡的一行雪況 */
+function snowLineHTML(k){
+  const s=snowNow(k);if(!s)return '';
+  return `<div class="dw-snow2${s.next12>=0.5?' on':''}">❄ 積雪 ${s.depth==null?'—':s.depth} cm${s.next12>=0.5?`・12h 內 +${fmtCm(s.next12)} cm`:''}</div>`;
+}
+setTimeout(()=>{renderSnowPanel();prefetchSnow(false);},2500);
+setInterval(()=>prefetchSnow(false),30*60*1000);
+window.addEventListener('online',()=>prefetchSnow(true));
 
 /* ============ 內嵌 Windy 天氣圖 ============ */
 function initRainRadar(){ refreshRainRadar(); }
@@ -2297,7 +2451,7 @@ function setTab(tab) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-'+tab).classList.add('active');
   window.scrollTo({top:0, behavior:'smooth'});
-  if(tab === 'weather'){ setTimeout(refreshRainRadar, 100); }
+  if(tab === 'weather'){ setTimeout(refreshRainRadar, 100); renderSnowPanel(); prefetchSnow(false); }
 }
 
 /* ============ 路線摘要：可收合 ============ */
@@ -3282,7 +3436,7 @@ function dayWeatherPanelHTML(i){
     const [ico,desc]=wmoInfo(cw.weather_code),temp=Math.round(cw.temperature_2m);
     const tone=temp<=-5?'t-deep':temp<=0?'t-cold':temp<=8?'t-cool':'t-mild';
     const when=e.fetchedAt?new Date(e.fetchedAt).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-    return `<div class="dw-card2 ${tone}"><div class="dw-place2">${escHtml(CITIES[k].label)}${e.stale?'<em>快取</em>':''}</div><div class="dw-main2"><span class="dw-ico2">${ico}</span><b>${temp}°</b></div><div class="dw-desc2">${desc}</div><div class="dw-metrics2"><span>💨 ${cw.wind_speed_10m} km/h</span><span>☔ ${cw.precipitation} mm</span></div>${sunRow}${when?`<small class="dw-when2">更新 ${when}</small>`:''}${tenki}</div>`;
+    return `<div class="dw-card2 ${tone}"><div class="dw-place2">${escHtml(CITIES[k].label)}${e.stale?'<em>快取</em>':''}</div><div class="dw-main2"><span class="dw-ico2">${ico}</span><b>${temp}°</b></div><div class="dw-desc2">${desc}</div><div class="dw-metrics2"><span>💨 ${cw.wind_speed_10m} km/h</span><span>☔ ${cw.precipitation} mm</span></div>${snowLineHTML(k)}${sunRow}${when?`<small class="dw-when2">更新 ${when}</small>`:''}${tenki}</div>`;
   }).join('');
   return `<div class="day-panel dw2"><div class="dw2-head"><div><small>${d.date}（${d.weekday}）</small><strong>今日天氣與穿搭</strong></div><img src="images/nav-weather.webp" alt="" width="64" height="64"></div><div class="dw2-wear"><span class="dw2-wear-ic">🧣</span><div><small>建議穿搭</small><span>${escHtml(d.wear||'')}</span></div></div><div class="dw2-grid${cities.length>1?' two':''}">${cards}</div><button type="button" class="dp-btn" onclick="refreshDayWeather()">更新即時氣象</button><p class="dp-note">日出日落依 ${d.date} 計算；氣溫是「現在」的天氣，出發前 2–3 天再看 tenki.jp 預報。</p><button type="button" class="dp-link" onclick="setTab('weather')">看完整天氣與雨雲圖 ›</button></div>`;
 }

@@ -195,6 +195,16 @@
 
   <!-- ================= WEATHER VIEW ================= -->
   <div class="view" id="view-weather">
+    <div class="section-card snow-section" style="margin-bottom:14px;">
+      <h3><img class="h-ic" src="images/bird-snowball.webp" alt="" width="28" height="28"> 今日雪況與降雪提醒</h3>
+      <div class="sub">各地現在的積雪、過去 24 小時新雪、接下來 12 小時會不會下雪，以及路面好不好走。出發前 16 天內，行程日的降雪預報也會顯示在每天的行程頁。</div>
+      <div id="snowAlertBox"></div>
+      <div id="snowNowList" class="snow-now-list"></div>
+      <div class="add-row" style="margin:10px 0 0;">
+        <button onclick="prefetchSnow(true)" style="flex:1; background:var(--blue); color:#fff; border:none; border-radius:999px; padding:10px 0; font-family:inherit; font-weight:700; font-size:13.5px; cursor:pointer; box-shadow:var(--shadow-sm);">🔄 更新雪況</button>
+      </div>
+      <div class="source-note" id="snowNowTime"></div>
+    </div>
     <div class="section-card" style="margin-bottom:14px;">
       <h3><img class="h-ic" src="images/nav-weather.webp" alt="" width="28" height="28"> 即時氣象與雪國穿搭指南</h3>
       <div class="sub">以日本氣象廳（JMA）模式的預報數值顯示千歲、札幌、洞爺湖與小樽的氣溫、風雪與穿搭建議；每個地點下方都有 tenki.jp 逐時／10 天預報連結。</div>

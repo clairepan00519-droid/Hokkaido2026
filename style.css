@@ -2314,3 +2314,39 @@ body.mode-travel .driver-edit{display:none;}
 .net-status .net-txt{font-size:12px!important;}
 /* 提示訊息沒有復原鈕時 */
 #undoToastButton[hidden]{display:none!important;}
+
+/* ===== hk11：今日雪況＋降雪提醒 ===== */
+.snow-banner{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:12px 14px;border-radius:16px;background:linear-gradient(135deg,#EEF4FF,#DCE7FA);border:1.5px solid #ABC2EC;color:#1F3A78;}
+.snow-banner svg{flex:none;margin-top:2px;}
+.snow-banner b{font-size:14.5px;}
+.snow-banner p{margin:4px 0 0;font-size:13.5px;line-height:1.6;}
+.snow-banner ul{margin:4px 0 0;padding-left:18px;font-size:13.5px;line-height:1.6;}
+.snow-banner li.heavy{color:#A12B2B;font-weight:800;}
+.snow-banner.heavy{background:linear-gradient(135deg,#FFF1EE,#FBDCD6);border-color:#E9A398;color:#7E1F1F;}
+.snow-banner.trip{background:linear-gradient(135deg,#F3F0FF,#E3DEFA);border-color:#BDB2EE;color:#3B2F7A;}
+.snow-banner.ok{background:#F2F7F3;border-color:#C5DCC9;color:#2F6A3D;}
+#daySnowSlot .snow-banner{margin:10px 0 0;}
+.snow-now-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.snow-city{min-width:0;padding:12px;border-radius:16px;background:#F7F9FE;border:1.5px solid #DCE5F6;}
+.snow-city.on{border-color:#8FAEE6;background:#EEF4FF;}
+.snow-city.heavy{border-color:#E9A398;background:#FFF4F1;}
+.snow-city-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px;margin-bottom:8px;}
+.snow-city-head strong{font-size:14.5px;color:var(--blue);line-height:1.3;}
+.snow-city-head span{font-size:13px;font-weight:800;color:#4A5570;white-space:nowrap;}
+.snow-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;text-align:center;}
+.snow-stats small{display:block;font-size:10.5px;color:#5A6680;line-height:1.25;min-height:2.5em;}
+.snow-stats b{font-size:19px;color:#141A2A;}
+.snow-stats i{font-style:normal;font-size:11px;margin-left:1px;color:#5A6680;}
+.snow-when{margin-top:8px;font-size:12.5px;font-weight:800;color:#2C4F9C;}
+.snow-city.heavy .snow-when{color:#A12B2B;}
+.snow-road{margin-top:8px;font-size:12.5px;line-height:1.55;color:#33405C;}
+.snow-road b{display:inline-block;margin-right:6px;padding:1px 8px;border-radius:999px;background:#E3EAF8;color:#27478C;font-size:11.5px;}
+.snow-empty{font-size:13px;color:#5A6680;padding:6px 2px;}
+.day-chip.snowy{position:relative;}
+.day-chip.snowy::after{content:'❄';position:absolute;top:-6px;right:-4px;width:18px;height:18px;border-radius:50%;background:#fff;border:1.5px solid #ABC2EC;color:#3F6CC4;font-size:11px;line-height:15px;text-align:center;}
+.dw-snow2{margin-top:6px;font-size:12px;font-weight:800;color:#4A5570;}
+.dw-snow2.on{color:#2C4F9C;}
+@media (max-width:360px){.snow-now-list{grid-template-columns:1fr;}}
+body.large-text .snow-banner p,body.large-text .snow-banner ul,body.large-text .snow-road{font-size:16px!important;}
+body.large-text .snow-now-list{grid-template-columns:1fr;}
+body.large-text .snow-stats small{font-size:12.5px;}
