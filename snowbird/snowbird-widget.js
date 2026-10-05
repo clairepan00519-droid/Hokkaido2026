@@ -25,10 +25,15 @@
     const img=document.createElement('img'); img.alt=''; img.width=112; img.height=112; birdButton.append(img);
     root.append(panel,birdButton); document.body.append(root);
     let scheduleTimer, hideTimer, stopped=false, deck=[];
+    /* 數字＋單位、英文詞、片假名詞不要被拆到兩行 */
+    function noBreakHTML(t){
+      const esc=String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return esc.replace(/(\d[\d,.:～~\-]*\s?(?:公尺|公里|公分|分鐘|小時|年|月|日|號|天|度|°C|cm|km|%|萬|億|倍)?|[A-Za-z][A-Za-z'’&.\-]*(?:\s[A-Za-z][A-Za-z'’&.\-]*)*|[\u30A0-\u30FF・]{2,})/g,'<span class="sb-nb">$1</span>');
+    }
     function pickMessage() {
       if (!deck.length) deck=data.messages.map((_,i)=>i);
       const i=deck.splice(Math.floor(Math.random()*deck.length),1)[0], m=data.messages[i];
-      label.textContent=m.label; text.textContent=m.text;
+      label.textContent=m.label; text.innerHTML=noBreakHTML(m.text);
       source.hidden=!m.source; if(m.source) source.href=m.source;
     }
     function schedule(delay) {
