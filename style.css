@@ -2350,3 +2350,42 @@ body.mode-travel .driver-edit{display:none;}
 body.large-text .snow-banner p,body.large-text .snow-banner ul,body.large-text .snow-road{font-size:16px!important;}
 body.large-text .snow-now-list{grid-template-columns:1fr;}
 body.large-text .snow-stats small{font-size:12.5px;}
+
+/* ===== hk11：編輯功能（評論多行編輯、自訂區域、副景點、改日期、多張附圖） ===== */
+.note-actions button{width:auto!important;height:auto!important;min-height:36px;padding:0 14px!important;border-radius:999px!important;font-size:13px!important;font-weight:800!important;background:#EEF3FB!important;color:var(--blue)!important;}
+.note-actions button:last-child{background:#FDE4DF!important;color:#B0412F!important;}
+.field-edit-actions button{width:auto!important;min-width:24px;padding:0 8px!important;border-radius:999px!important;}
+.eatshop-add{display:flex;flex-wrap:wrap;gap:8px;}
+.eatshop-add button:last-child{background:#fff!important;color:var(--blue)!important;border:1.5px solid #ABC2EC!important;}
+.area-ctl{margin-left:auto;display:inline-flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;}
+.area-ctl button{min-height:36px;border:0;border-radius:999px;background:#EEF3FB;color:var(--blue);font:inherit;font-size:12px;font-weight:800;padding:5px 12px;cursor:pointer;}
+.area-ctl button.del{background:#FDE4DF;color:#B0412F;}
+body.mode-travel .eatshop-group.empty-area{display:none;}
+.dp-empty{font-size:12.5px;color:var(--ink-soft);line-height:1.6;background:#fff;border-radius:12px;padding:12px;}
+.move-day-btn{background:#FFF6DC;color:#7A5600;border:none;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap;}
+.moved-badge{background:#FFF6DC!important;color:#7A5600!important;}
+/* 副景點 */
+.subspots{margin:12px 0 4px;padding:12px;border-radius:16px;background:linear-gradient(160deg,#F3F6FD,#E7EDF9);border:1.5px solid #C9D6F0;}
+.subspots-head{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:var(--blue);font-size:15px;}
+.subspots-head em{font-style:normal;font-size:12px;font-weight:800;background:var(--blue);color:#fff;border-radius:999px;padding:1px 9px;}
+.sub2{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:8px;border:1px solid #DCE5F6;}
+.sub2-main{min-width:0;flex:1;}
+.sub2-main b{font-size:16px;color:var(--ink);}
+.sub2-dur{margin-left:8px;font-size:12px;font-weight:700;color:var(--blue);background:#EEF3FB;border-radius:999px;padding:1px 9px;white-space:nowrap;}
+.sub2-main p{margin:6px 0 0;font-size:14px;line-height:1.6;color:#4A5570;white-space:pre-line;}
+.sub2-acts{display:flex;flex-direction:column;gap:6px;flex:none;align-items:stretch;}
+.sub2-nav{display:flex;align-items:center;justify-content:center;min-height:36px;padding:0 16px;border-radius:999px;background:linear-gradient(135deg,var(--blue),#3F6CC4);color:#fff!important;font-size:13px;font-weight:800;text-decoration:none;}
+.sub2-edit{display:flex;flex-direction:column;gap:6px;}
+.sub2-edit button{min-height:34px;border:0;border-radius:999px;background:#EEF3FB;color:var(--blue);font:inherit;font-size:12.5px;font-weight:800;padding:0 12px;cursor:pointer;}
+.sub2-edit button.del{background:#FDE4DF;color:#B0412F;}
+.subspots-add{width:100%;min-height:44px;border:1.5px dashed #8FAEE6;background:#F7F9FE;color:var(--blue);border-radius:14px;font:inherit;font-size:14px;font-weight:800;cursor:pointer;}
+/* 副景點照片、規範附圖（多張） */
+.sub2-phs,.rule-phs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+body.mode-travel .sub2-phs.no-img,body.mode-travel .rule-phs.no-img{display:none;}
+.sub2-ph,.rule-ph{position:relative;width:84px;height:84px;border-radius:12px;overflow:hidden;background:#eee;flex:none;}
+.sub2-ph img,.rule-ph img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;}
+.sub2-ph button,.rule-ph button{position:absolute;top:4px;right:4px;width:30px;height:30px;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:14px;font-weight:900;cursor:pointer;line-height:1;}
+.sub2-ph-add,.rule-ph-add{display:inline-flex;align-items:center;justify-content:center;min-width:84px;height:84px;padding:0 12px;border:1.5px dashed #8FAEE6;border-radius:12px;background:#F7F9FE;color:var(--blue);font-size:13px;font-weight:800;cursor:pointer;text-align:center;}
+.rule-ph-add{border-color:#C5C8D3;background:#fff;color:var(--ink-soft);}
+.sub2-phs.no-img .sub2-ph-add,.rule-phs.no-img .rule-ph-add{height:42px;border-radius:999px;}
+body.large-text .sub2-main p{font-size:15.5px!important;}
