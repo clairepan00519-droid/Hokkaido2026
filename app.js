@@ -78,6 +78,15 @@ function unlockFamilySite({offline=false}={}){
   if(gate){ gate.hidden=true; gate.setAttribute('aria-hidden','true'); }
   if(!offline) startFamilyCloud();
 }
+/* hk11：只看模式（登入過期／暫不同步）時的頂端提示 */
+function showReloginBanner(){
+  if(document.getElementById('reloginBanner'))return;
+  const el=document.createElement('div');el.id='reloginBanner';el.className='relogin-banner';
+  el.innerHTML='<span>需要重新登入，才能和家人同步。<br>行程都還在，可以照常看；這段時間的修改會先存在這支手機，登入後自動合併。</span><button type="button">重新登入</button>';
+  el.querySelector('button').onclick=()=>{const g=document.getElementById('familyGate');if(g){g.hidden=false;g.setAttribute('aria-hidden','false');}const ob=document.getElementById('offlineGateButton');if(ob){ob.hidden=false;ob.textContent='先不要，繼續看行程';ob.onclick=()=>{g.hidden=true;g.setAttribute('aria-hidden','true');};}setTimeout(()=>document.getElementById('familyGateEmail')?.focus(),80);};
+  document.querySelector('.app')?.prepend(el);
+}
+function hideReloginBanner(){document.getElementById('reloginBanner')?.remove();}
 function loginErrorText(e,status){
   const m=String(e&&e.message||e||'');
   if(/Invalid login credentials/i.test(m))return 'Email 或密碼不正確。請確認是在「這個」Supabase 專案的 Authentication → Users 建立的帳號，密碼大小寫也要一致。';
@@ -107,7 +116,7 @@ async function submitFamilyGate(){
     status=r.status;
     let data={}; try{data=await r.json();}catch(_){}
     if(!r.ok)throw new Error(data.error_description||data.msg||data.message||data.error||`HTTP ${r.status}`);
-    saveAuthSession(data);unlockFamilySite();input.value='';
+    saveAuthSession(data);hideReloginBanner();unlockFamilySite();input.value='';
   }catch(e){ if(err) err.textContent=loginErrorText(e,status); input.select(); }
   finally{ btn.disabled=false; btn.textContent=label; }
 }
@@ -118,7 +127,8 @@ async function initAuthGate(){
   const btn=document.getElementById('familyGateButton');
   const offlineBtn=document.getElementById('offlineGateButton');
   const trusted=localStorage.getItem(FAMILY_TRUSTED_DEVICE_KEY)==='1';
-  if(offlineBtn){offlineBtn.hidden=!(trusted&&!navigator.onLine);offlineBtn.onclick=()=>unlockFamilySite({offline:true});}
+  /* hk11：這支手機只要登入過，就一律提供「先看行程」，不會因為登入過期或網路怪怪的就整個打不開 */
+  if(offlineBtn){offlineBtn.hidden=!trusted;offlineBtn.onclick=()=>{unlockFamilySite({offline:true});if(navigator.onLine)showReloginBanner();};}
   if(btn) btn.addEventListener('click',submitFamilyGate);
   if(input) input.addEventListener('keydown',e=>{ if(e.key==='Enter') submitFamilyGate(); });
   if(familyAuthSession){
@@ -129,6 +139,8 @@ async function initAuthGate(){
       const netFail=e instanceof TypeError||/Failed to fetch|NetworkError|Load failed|network|timeout|Abort/i.test(msg);
       if(netFail&&trusted){unlockFamilySite({offline:true});return;}
       saveAuthSession(null);
+      /* 登入過期：行程資料都還在這支手機上，先讓人照常看行程，頂端提示「重新登入」即可同步 */
+      if(trusted){unlockFamilySite({offline:true});showReloginBanner();return;}
     }
   }
   setTimeout(()=>document.getElementById('familyGateEmail')?.focus(),80);
@@ -553,8 +565,26 @@ function applyRemoteRow(row, forceApply=false){
   /* 用 >= 而非 >：自己剛推送出去、又被下一次輪詢讀回來的「回聲」時間戳會完全相同，
      不需要（也不應該）再觸發一次整區重繪。 */
   if(lt&&Date.parse(lt)>=Date.parse(rt))return;
+  let pushBack=null;
   cloudSync.applyingRemote=true;
-  try{let remote;try{remote=JSON.parse(row.value);}catch(e){remote=null;}const value=normalizeSyncValue(row.key,remote);const valueStr=JSON.stringify(value);replaceLocalJson(row.key,value);setSyncMeta(row.key,rt);setSyncBase(row.key,value);applyStoreUpdate(row.key,valueStr);}catch(e){console.error('套用家人資料失敗',e);}finally{cloudSync.applyingRemote=false;}
+  try{
+    let remote;try{remote=JSON.parse(row.value);}catch(e){remote=null;}
+    if(remote==null)return; /* 雲端內容壞掉／空白時，絕不拿來覆蓋本機資料 */
+    const remoteN=normalizeSyncValue(row.key,remote);
+    let value=remoteN;
+    /* hk11：本機若有「還沒同步上去」的變更（和上次同步完成時的內容不同），
+       先和雲端版本合併，再把合併結果送回雲端，而不是直接用雲端版本整包蓋掉。 */
+    const local=localValueForKey(row.key);
+    if(local!=null){
+      const localN=normalizeSyncValue(row.key,local),base=getSyncBase()[row.key];
+      if(!sameJSON(localN,base)&&!sameJSON(localN,remoteN)){
+        value=mergeForSync(row.key,localN,remoteN);
+        if(!sameJSON(value,remoteN))pushBack=value;
+      }
+    }
+    replaceLocalJson(row.key,value);setSyncMeta(row.key,rt);setSyncBase(row.key,remoteN);applyStoreUpdate(row.key,JSON.stringify(value));
+  }catch(e){console.error('套用家人資料失敗',e);pushBack=null;}finally{cloudSync.applyingRemote=false;}
+  if(pushBack)scheduleCloudPush(row.key,pushBack);
 }
 /* 若目前有任何未送出的編輯表單開著，先記下「稍後要重繪」，
    等表單關閉／送出後再統一補畫一次，避免蓋掉使用者還沒儲存的內容。 */
@@ -586,21 +616,25 @@ function scheduleCloudPush(key,valueObj){
   clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,700);updateSyncStatus(null,'saving');
 }
 async function flushCloudPush(){
+  if(cloudSync.flushing){clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,800);return;}
   const entries=Object.entries(cloudSync.pending);cloudSync.pending={};
-  for(const[key,localSnapshot]of entries){
+  if(!entries.length)return;
+  cloudSync.flushing=true;
+  try{
+  for(let ei=0;ei<entries.length;ei++){const[key,localSnapshot]=entries[ei];
     try{
       /* 推送前先讀一次雲端目前的版本，和這台裝置要送出的內容做合併（聯集），
          而不是直接整包覆蓋過去。這樣就算家人在你按下儲存前的一兩秒內，
          剛好也改了同一分類裡的「不同項目」，兩邊的變更都會保留，
          不會有一邊的資料在同步後憑空消失。 */
       let mergedValue=localSnapshot;
-      try{
-        const remoteRow=await restGetRow(key);
-        if(remoteRow){
-          let remoteValue=null; try{remoteValue=JSON.parse(remoteRow.value);}catch(e){}
-          if(remoteValue!=null) mergedValue=mergeForSync(key,localSnapshot,remoteValue);
-        }
-      }catch(e){ /* 讀不到雲端目前版本就先用本機版本推送，不讓整個同步卡住 */ }
+      /* hk11：讀不到雲端目前版本時不再「直接用本機版本蓋過去」（那樣可能把家人剛加的資料蓋掉），
+         改成整批保留、稍後自動重試。 */
+      const remoteRow=await restGetRow(key);
+      if(remoteRow){
+        let remoteValue=null; try{remoteValue=JSON.parse(remoteRow.value);}catch(e){}
+        if(remoteValue!=null) mergedValue=mergeForSync(key,localSnapshot,remoteValue);
+      }
       const serverTime=await restUpsert(key,mergedValue);
       if(JSON.stringify(mergedValue)!==JSON.stringify(localSnapshot)){
         /* 合併後比本機原本的內容多了家人那邊的東西，寫回本機讓這台裝置也看得到 */
@@ -610,10 +644,25 @@ async function flushCloudPush(){
       }
       setSyncMeta(key,serverTime);setSyncBase(key,mergedValue);
       cloudSync.lastError=null;
-    }catch(e){cloudSync.lastError=e;console.error('同步寫入失敗',e);updateSyncStatus(e);return;}
+    }catch(e){
+      cloudSync.lastError=e;console.error('同步寫入失敗',e);updateSyncStatus(e);
+      /* hk11：寫入失敗（離線、網路不穩、登入過期）時，把這一筆與後面還沒送出的全部放回待送清單，
+         之後自動重試；期間背景輪詢不會用雲端舊資料蓋掉這些尚未送出的變更。 */
+      entries.slice(ei).forEach(([k,v])=>{if(!Object.prototype.hasOwnProperty.call(cloudSync.pending,k))cloudSync.pending[k]=v;});
+      cloudSync.retryDelay=Math.min((cloudSync.retryDelay||2500)*2,60000);
+      clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,cloudSync.retryDelay);
+      return;
+    }
   }
+  }finally{cloudSync.flushing=false;}
+  cloudSync.retryDelay=0;
   cloudSync.lastOk=Date.now();updateSyncStatus();setTimeout(pollCloudChanges,500);
 }
+function hasPendingCloudPush(){return Object.keys(cloudSync.pending||{}).length>0;}
+/* 切到背景、關閉 App 或恢復網路時，馬上把還沒送出的變更送出去 */
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&cloudSync.enabled&&hasPendingCloudPush()){clearTimeout(cloudSync.timer);flushCloudPush();}});
+window.addEventListener('pagehide',()=>{if(cloudSync.enabled&&hasPendingCloudPush()){clearTimeout(cloudSync.timer);flushCloudPush();}});
+window.addEventListener('online',()=>{if(cloudSync.enabled&&hasPendingCloudPush()){cloudSync.retryDelay=0;clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,800);}});
 function updateSyncStatus(err,state){
   const el=document.getElementById('cloudSyncStatus');if(!el)return;el.style.display='inline-flex';el.classList.toggle('sync-error',!!err);el.classList.toggle('sync-saving',state==='saving'||state==='connecting');
   if(err){el.textContent='⚠️ '+friendlySyncError(err);el.title=String(err&&err.message||err);}
@@ -810,9 +859,12 @@ function offerUndo(message,restore){
   const toast=document.getElementById('undoToast'),text=document.getElementById('undoToastText'),btn=document.getElementById('undoToastButton');
   if(!toast||!text||!btn)return;
   clearTimeout(undoTimer);text.textContent=message;toast.hidden=false;
-  btn.onclick=()=>{clearTimeout(undoTimer);toast.hidden=true;restore();};
-  undoTimer=setTimeout(()=>{toast.hidden=true;},5000);
+  /* 沒有東西可以復原的「提示訊息」不顯示復原鈕；可復原的給 8 秒，長輩來得及按 */
+  btn.hidden=typeof restore!=='function';
+  btn.onclick=()=>{clearTimeout(undoTimer);toast.hidden=true;if(typeof restore==='function')restore();};
+  undoTimer=setTimeout(()=>{toast.hidden=true;},typeof restore==='function'?8000:3500);
 }
+function showToast(message){offerUndo(message,null);}
 function escHtml(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 const NOTE_DRAFT_KEY='hokkaido_note_drafts_v1';
@@ -1116,11 +1168,15 @@ async function addCustomSpot(dayIdx){
 }
 function delCustomSpot(dayIdx, i){
   if(!customSpotsStore[dayIdx]) return;
-  const removed=customSpotsStore[dayIdx].splice(i,1)[0];
+  /* hk11：不再把它從清單「切掉」，只標記為已刪除。
+     自訂景點的筆記、照片、評論都是用「第幾個」對應的；以前切掉後面的景點會往前補位，
+     導致下一個景點接收到被刪景點的筆記照片（自己的反而不見）。標記刪除就不會錯位，也能完整復原。 */
+  const cur=customSpotsStore[dayIdx][i];if(!cur||cur.deleted)return;
+  customSpotsStore[dayIdx][i]={...cur,deleted:true};
   persistCustomSpots();
   renderDayContent();
   updateSpotCount();
-  offerUndo('已刪除自訂景點',()=>{if(!customSpotsStore[dayIdx])customSpotsStore[dayIdx]=[];customSpotsStore[dayIdx].splice(i,0,removed);persistCustomSpots();renderDayContent();updateSpotCount();});
+  offerUndo('已刪除自訂景點',()=>{const a=customSpotsStore[dayIdx];if(!a||!a[i])return;const r={...a[i]};delete r.deleted;a[i]=r;persistCustomSpots();renderDayContent();updateSpotCount();});
 }
 function toggleEditSpot(idx){
   const el = document.getElementById('spot-edit-'+idx);
@@ -1142,7 +1198,7 @@ function saveSpotEdit(dayIdx, i, idx){
 }
 function updateSpotCount(){
   let total = days.reduce((a,d)=>a+d.spots.length + (d.moreSpots?d.moreSpots.length:0),0);
-  Object.values(customSpotsStore).forEach(arr => total += arr.length);
+  Object.values(customSpotsStore).forEach(arr => total += (Array.isArray(arr)?arr.filter(x=>x&&!x.deleted).length:0));
   document.getElementById('spotCount').textContent = total;
 }
 
@@ -1303,7 +1359,20 @@ function tripTodayIndex(now=new Date()){
   if(y!==2027)return -1;
   return days.findIndex(x=>{const [mm,dd]=x.date.split('/').map(Number);return mm===m&&dd===d;});
 }
-function goToToday(){const i=tripTodayIndex();setActiveDay(i>=0?i:0);}
+function goToToday(){
+  const i=tripTodayIndex();setActiveDay(i>=0?i:0);
+  if(i<0){const now=new Date();showToast(now<new Date(2027,1,4)?'旅程還沒開始，先顯示第 1 天（2/4）':'旅程已結束，顯示第 1 天');}
+}
+/* 旅途中 App 放在背景過夜，隔天打開時自動切到「今天」（使用者正在看別天時不打擾，只在停在昨天時切換） */
+let _lastSeenDate=new Date().toDateString();
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState!=='visible')return;
+  const nowStr=new Date().toDateString();if(nowStr===_lastSeenDate)return;
+  _lastSeenDate=nowStr;
+  const t=tripTodayIndex();if(t<0)return;
+  if(typeof activeDay==='number'&&activeDay===t-1&&!document.getElementById('formModal')){setActiveDay(t);showToast(`早安！已切到今天：D${days[t].dayNum}・${days[t].date}`);}
+  else renderDayChips();
+});
 
 function renderDayChips(){
   const today=tripTodayIndex();
@@ -1324,7 +1393,7 @@ let activeSubTabStore = {}; /* dayIdx -> 'main' | 'transport' | 'more' | 'routem
 function transportPlanHTML(dayIdx){
   const plan=transportPlans[dayIdx];
   if(!plan)return `<section class="transport-plan"><div class="tp-head"><div><small>D${days[dayIdx].dayNum}・${days[dayIdx].date}</small><strong>今日交通</strong></div><img src="images/art-route.webp" alt="" width="56" height="56"></div>${customTransportHTML(dayIdx)}${transportAddBarHTML(dayIdx)}</section>`;
-  const routes=(rows,prefix='route')=>`<div class="transport-steps">${(rows||[]).map((r0,i)=>{const segmentKey=`${prefix}-${i}`;const sk=`tp${dayIdx}-${segmentKey}`;if(currentFieldValue(sk,'hidden',null)==='1')return '';const r={from:currentFieldValue(sk,'from',r0.from)||r0.from,to:currentFieldValue(sk,'to',r0.to)||r0.to,mode:currentFieldValue(sk,'mode',r0.mode)||r0.mode,time:currentFieldValue(sk,'time',r0.time)||r0.time,note:currentFieldValue(sk,'note',r0.note)||r0.note};window._tpOrig=window._tpOrig||{};window._tpOrig[sk]=r0;return `<div class="transport-step"><span class="transport-step-no">${i+1}</span><div class="transport-step-main"><div class="transport-points"><strong>${escHtml(r.from)}</strong><span>→</span><strong>${escHtml(r.to)}</strong></div><div class="transport-meta"><b>${escHtml(r.mode)}</b><span>⏱ ${escHtml(r.time)}</span></div><small>${escHtml(r.note)}</small><div class="edit-only tp-step-actions"><button type="button" onclick="editTransportStep('${sk}')">✎ 修改</button><button type="button" onclick="deleteTransportStep('${sk}')">🗑 刪除</button></div>${transportSegmentExtrasHTML(dayIdx,segmentKey)}</div></div>`;}).join('')}</div>`;
+  const routes=(rows,prefix='route')=>`<div class="transport-steps">${(rows||[]).map((r0,i)=>{const segmentKey=`${prefix}-${i}`;const sk=`tp${dayIdx}-${segmentKey}`;if(currentFieldValue(sk,'hidden',null)==='1')return '';const r={from:currentFieldValue(sk,'from',r0.from)||r0.from,to:currentFieldValue(sk,'to',r0.to)||r0.to,mode:currentFieldValue(sk,'mode',r0.mode)||r0.mode,time:currentFieldValue(sk,'time',r0.time)||r0.time,note:currentFieldValue(sk,'note',r0.note)||r0.note};window._tpOrig=window._tpOrig||{};window._tpOrig[sk]=r0;return `<div class="transport-step"><span class="transport-step-no">${i+1}</span><div class="transport-step-main"><div class="transport-points"><strong>${escHtml(r.from)}</strong><span>→</span><strong>${escHtml(r.to)}</strong></div><div class="transport-meta"><b>${escHtml(r.mode)}</b><span>⏱ ${escHtml(r.time)}</span></div><small>${escHtml(r.note)}</small>${tpGoButtonsHTML(dayIdx,r,i===(rows||[]).length-1)}<div class="edit-only tp-step-actions"><button type="button" onclick="editTransportStep('${sk}')">✎ 修改</button><button type="button" onclick="deleteTransportStep('${sk}')">🗑 刪除</button></div>${transportSegmentExtrasHTML(dayIdx,segmentKey)}</div></div>`;}).join('')}</div>`;
   const body=plan.choices?`<div class="transport-choice-list">${plan.choices.map((choice,i)=>`<details class="transport-choice"${i===0?' open':''}><summary>${escHtml(choice.name)}<span>展開路線</span></summary>${routes(choice.routes,`choice-${i}`)}</details>`).join('')}</div>`:plan.drive?`<div class="transport-drive-card"><span>🚗</span><div><strong>今天全程自駕</strong><small>按下方按鈕開啟當日主要地點導航；停車、休息站與道路狀況以當日為準。</small>${transportSegmentExtrasHTML(dayIdx,'drive-0')}</div></div>`:routes(plan.routes);
   return `<section class="transport-plan"><div class="tp-head"><div><small>D${days[dayIdx].dayNum}・${days[dayIdx].date}</small><strong>今日交通</strong></div><img src="images/art-route.webp" alt="" width="56" height="56"></div><div class="transport-alert">⚠️ ${escHtml(plan.alert)}</div>${body}${customTransportHTML(dayIdx)}${legacyTransportExtrasHTML(dayIdx)}${transportAddBarHTML(dayIdx)}<div class="transport-actions"><a href="https://www.google.com/maps/dir/?api=1&travelmode=${plan.drive?'driving':'transit'}&destination=${encodeURIComponent(currentFieldValue('day'+dayIdx+'-nav','mapQuery',null)||(days[dayIdx].region+' Japan'))}" target="_blank" rel="noopener">📍 開啟今日導航</a><button type="button" class="edit-only tp-nav-fix" onclick="editSpotField(event,'day${dayIdx}-nav','mapQuery','今日導航目的地（地址、經緯度或關鍵字）')">修正導航</button><button type="button" class="edit-only tp-nav-fix" onclick="restoreTransportSteps(${dayIdx})">↺ 還原本日交通步驟</button></div></section>`;
 }
@@ -1353,7 +1422,7 @@ function allSearchableSpots(){
     };
     (day.spots||[]).forEach((spot,i)=>add(spot,`d${dayIdx}-m${i}`));
     (day.moreSpots||[]).forEach((spot,i)=>add(spot,`d${dayIdx}-s${i}`));
-    (customSpotsStore[dayIdx]||[]).forEach((spot,i)=>add(spot,`d${dayIdx}-c${i}`));
+    (customSpotsStore[dayIdx]||[]).forEach((spot,i)=>{if(!spot.deleted)add(spot,`d${dayIdx}-c${i}`);});
     const plan=transportPlans[dayIdx];
     if(plan){
       const routeText=[...(plan.routes||[]),...(plan.choices||[]).flatMap(c=>c.routes||[])].map(r=>[r.from,r.to,r.mode,r.time,r.note].join(' ')).join(' ');
@@ -1611,7 +1680,7 @@ function renderDayContent(){
   const d = days[activeDay];
   const curSubTab = activeSubTabStore[activeDay] || 'main';
   const stayList=dayStays(activeDay);
-  const stayBtns=stayList.length?`<span class="stay-quick-btns"><a class="stay-quick-nav" href="${escAttr(mapsLink(stayList[0].nav))}" target="_blank" rel="noopener">導航</a><button class="stay-quick-fix edit-only" type="button" onclick="editSpotField(event,'${stayList[0].key}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字）')">修正</button></span>`:'';
+  const stayBtns=stayList.length?`<span class="stay-quick-btns"><a class="stay-quick-nav" href="${escAttr(mapsLink(stayList[0].nav))}" target="_blank" rel="noopener">導航</a><button class="stay-quick-driver" type="button" data-name="${escAttr(stayList[0].name)}" data-nav="${escAttr(stayList[0].nav)}" onclick="showDriverCard(this.dataset.name,this.dataset.nav)">給司機看</button><button class="stay-quick-fix edit-only" type="button" onclick="editSpotField(event,'${stayList[0].key}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字）')">修正</button></span>`:'';
   const stayQuickHTML=stayList.length?`<div class="stay-quick-card"><div class="stay-quick-top"><div class="stay-quick-icon"><img src="images/nav-lodging.webp" alt="" width="34" height="34"></div><div class="stay-quick-copy"><small>今晚住宿</small><strong>${stayList.map(x=>escHtml(x.name)).join('、')}</strong></div></div>${stayList.map((x,i)=>`<div class="stay-quick-amen">${stayList.length>1?`<em>${escHtml(x.name)}</em>`:''}${hotelAmenityChips(x.key)}${i===stayList.length-1?stayBtns:''}</div>`).join('')}</div>`:emptyStayCardHTML(activeDay);
 
   const mainList = applyOrder(activeDay, 'main', getNaturalList(activeDay, 'main'));
@@ -2210,7 +2279,7 @@ function updateNetStatus(){
     ? '<span class="net-dot online"></span><span class="net-txt">線上</span>'
     : '<span class="net-dot offline"></span><span class="net-txt">離線</span>';
 }
-window.addEventListener('online', async()=>{ updateNetStatus(); loadLiveWeather(); refreshRainRadar();if(readAuthSession()){familyAuthSession=readAuthSession();try{await ensureAuthToken();startFamilyCloud();}catch(e){updateSyncStatus(e);}} });
+window.addEventListener('online', async()=>{ updateNetStatus(); loadLiveWeather(); refreshRainRadar();if(readAuthSession()){familyAuthSession=readAuthSession();try{await ensureAuthToken();hideReloginBanner();startFamilyCloud();}catch(e){updateSyncStatus(e);if(/登入已過期/.test(String(e&&e.message||e)))showReloginBanner();}} });
 window.addEventListener('offline', updateNetStatus);
 
 /* ============ Service Worker（離線快取整個網頁） ============ */
@@ -2366,7 +2435,7 @@ function dayStays(i){
   const add=(s,key)=>{if(s.cat!=='hotel'||hidden.has(key))return;const name=currentFieldValue(key,'name',s.name)||s.name;out.push({key,name,nav:currentFieldValue(key,'mapQuery',null)||name});};
   (d.spots||[]).forEach((s,j)=>add(s,`d${i}-m${j}`));
   (d.moreSpots||[]).forEach((s,j)=>add(s,`d${i}-s${j}`));
-  (customSpotsStore[i]||[]).forEach((s,j)=>add(s,`d${i}-c${j}`));
+  (customSpotsStore[i]||[]).forEach((s,j)=>{if(!s.deleted)add(s,`d${i}-c${j}`);});
   return out;
 }
 
@@ -2936,13 +3005,22 @@ function icImg(name,cls='ic-img'){return `<img class="${cls}" src="${NAV_IC[name
 
 /* ---------- 標頭控制 ---------- */
 function currentUiMode(){return document.body.classList.contains('mode-edit')?'edit':'travel';}
-function toggleUiMode(){setUiMode(currentUiMode()==='edit'?'travel':'edit');}
+/* hk11：按鈕寫「按了會做什麼」；進入編輯模式先確認一次，避免長輩誤觸後看到一堆刪除鈕 */
+function toggleUiMode(){
+  if(currentUiMode()==='edit'){setUiMode('travel');return;}
+  let asked=false;try{asked=sessionStorage.getItem('hokkaido_edit_confirmed')==='1';}catch(e){}
+  if(!asked&&!confirm('要進入「編輯模式」嗎？\n\n編輯模式可以修改、新增、刪除行程內容。\n只想看行程的話，請按「取消」。'))return;
+  try{sessionStorage.setItem('hokkaido_edit_confirmed','1');}catch(e){}
+  setUiMode('edit');
+}
 function toggleTextSize(){setTextSize(document.body.classList.contains('large-text')?0:1);}
 function syncHeaderControls(){
   const m=document.getElementById('modeBtn');
-  if(m){const e=currentUiMode()==='edit';m.textContent=e?'編輯模式':'旅行模式';m.classList.toggle('edit',e);m.title=e?'目前是編輯模式，點一下切換成旅行模式':'目前是旅行模式，點一下切換成編輯模式';}
+  if(m){const e=currentUiMode()==='edit';m.textContent=e?'✓ 完成編輯':'✎ 編輯';m.classList.toggle('edit',e);m.title=e?'改完了，回到只看行程的旅行模式':'進入編輯模式，可以修改行程';m.setAttribute('aria-label',m.title);}
   const t=document.getElementById('sizeBtn');
-  if(t){const big=document.body.classList.contains('large-text');t.textContent=big?'特大字':'標準字';t.classList.toggle('on',big);}
+  if(t){const big=document.body.classList.contains('large-text');t.textContent=big?'字縮小':'字放大';t.classList.toggle('on',big);t.setAttribute('aria-label',big?'把字縮回標準大小':'把字放大');}
+  let bar=document.getElementById('editModeBar');
+  if(!bar&&document.querySelector('.app')){bar=document.createElement('div');bar.id='editModeBar';bar.className='edit-mode-bar';bar.innerHTML='<span>✎ 編輯模式中：可以修改、新增、刪除</span><button type="button" onclick="setUiMode(\'travel\')">完成編輯</button>';document.querySelector('.app').prepend(bar);}
 }
 document.addEventListener('DOMContentLoaded',syncHeaderControls);
 
@@ -2988,7 +3066,7 @@ function collectSpots(filterFn){
     };
     (day.spots||[]).forEach((s,i)=>add(s,`d${dayIdx}-m${i}`));
     (day.moreSpots||[]).forEach((s,i)=>add(s,`d${dayIdx}-s${i}`));
-    (customSpotsStore[dayIdx]||[]).forEach((s,i)=>add(s,`d${dayIdx}-c${i}`));
+    (customSpotsStore[dayIdx]||[]).forEach((s,i)=>{if(!s.deleted)add(s,`d${dayIdx}-c${i}`);});
   });
   return out;
 }
@@ -3327,7 +3405,7 @@ function persistEatPlan(){safeSetItem('hokkaido_eat_plan',eatPlanStore);}
 function eatCustomSpot(c){return S(c.name,c.kind==='shop'?'shopping':'food',c.note||'',{mapQuery:c.mapQuery||null});}
 function spotByKey(key){
   let m=String(key).match(/^d(\d+)-([msc])(\d+)$/);
-  if(m){const di=Number(m[1]),j=Number(m[3]),d=days[di];if(!d)return null;return m[2]==='m'?d.spots[j]:m[2]==='s'?(d.moreSpots||[])[j]:getCustomSpots(di)[j];}
+  if(m){const di=Number(m[1]),j=Number(m[3]),d=days[di];if(!d)return null;return m[2]==='m'?d.spots[j]:m[2]==='s'?(d.moreSpots||[])[j]:((x=>x&&!x.deleted?x:null)(getCustomSpots(di)[j]));}
   m=String(key).match(/^es:(.+)$/);
   if(m){const c=eatShopStore.find(x=>x.id===m[1]);return c?eatCustomSpot(c):null;}
   return null;
@@ -3363,7 +3441,7 @@ function getNaturalList(dayIdx, listType){
   const allFixed = d.spots.map((s,i)=>({spot:s, key:`d${dayIdx}-m${i}`, fixedMeta:{dayIdx}}))
     .concat((d.moreSpots||[]).map((s,i)=>({spot:s, key:`d${dayIdx}-s${i}`, fixedMeta:{dayIdx}})))
     .filter(o=>!hidden.has(o.key));
-  const allCustom = customSpots.map((s,i)=>({spot:s, key:`d${dayIdx}-c${i}`, customMeta:{dayIdx, i}}));
+  const allCustom = customSpots.map((s,i)=>({spot:s, key:`d${dayIdx}-c${i}`, customMeta:{dayIdx, i}})).filter(o=>o.spot&&!o.spot.deleted);
   const belongs=(o)=> listType==='life' ? (o.spot.life || cats.includes(o.spot.cat)) : (!o.spot.life && cats.includes(o.spot.cat));
   let result=allFixed.filter(belongs).concat(allCustom.filter(belongs)).filter(o=>!master.has(o.key));
   if(listType==='life'){
@@ -4027,6 +4105,102 @@ function deleteCustomTransport(dayIdx,id,skip){
   const removed=arr.splice(i,1)[0];if(!arr.length)delete transportCustomStore[dayIdx];
   persistTransportCustom();renderDayContent();
   offerUndo('已刪除交通步驟',()=>{(transportCustomStore[dayIdx]=transportCustomStore[dayIdx]||[]).splice(Math.min(i,(transportCustomStore[dayIdx]||[]).length),0,removed);persistTransportCustom();renderDayContent();});
+}
+/* hk11：每段交通直接「導航到目的地」；搭計程車的段落多一個「給司機看」大字卡 */
+function tpDestination(dayIdx,toText,isLast){
+  const raw=String(toText||'').trim();
+  const core=raw.replace(/[（(][^）)]*[）)]/g,'').trim();
+  if(/^(飯店|住宿|旅館|回飯店)$/.test(core)){
+    /* 一天最後一段「回飯店」＝今晚住的；白天中途「回飯店」＝昨晚住的那間 */
+    const tonight=dayStays(dayIdx)[0],lastNight=dayIdx>0?dayStays(dayIdx-1)[0]:null;
+    const st=isLast?(tonight||lastNight):(lastNight||tonight);
+    if(st)return {name:st.name,nav:st.nav};
+  }
+  if(!core)return null;
+  const list=[...getNaturalList(dayIdx,'main'),...getNaturalList(dayIdx,'life'),...(dayIdx>0?getNaturalList(dayIdx-1,'life').filter(o=>o.spot.cat==='hotel'):[])].filter(o=>o.spot&&!o.spot.pool&&o.spot.cat!=='transport');
+  const hit=list.find(o=>{const n=currentFieldValue(o.key,'name',o.spot.name)||o.spot.name;return n===core||n.includes(core)||core.includes(n);});
+  if(hit){const n=currentFieldValue(hit.key,'name',hit.spot.name)||hit.spot.name;return {name:n,nav:currentFieldValue(hit.key,'mapQuery',null)||hit.spot.mapQuery||n};}
+  return {name:core,nav:core};
+}
+function tpTravelMode(mode){
+  const m=String(mode||'');
+  if(/步行|🚶/.test(m))return 'walking';
+  if(/計程車|自駕|開車|🚕|🚗|🚙/.test(m))return 'driving';
+  return 'transit';
+}
+function tpDirLink(nav,travelmode){
+  const v=String(nav||'').trim();
+  if(/^https?:\/\//i.test(v))return v;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(/^[-+]?\d/.test(v)?v:v+' Japan')}&travelmode=${travelmode}`;
+}
+function tpGoButtonsHTML(dayIdx,r,isLast){
+  if(/✈️|航空|飛機/.test(String(r.mode||'')))return '';
+  const dest=tpDestination(dayIdx,r.to,isLast);if(!dest)return '';
+  const tm=tpTravelMode(r.mode);
+  const taxi=/計程車|🚕/.test(String(r.mode||'')+' '+String(r.note||''));
+  return `<div class="tp-go"><a href="${escAttr(tpDirLink(dest.nav,tm))}" target="_blank" rel="noopener">導航到 ${escHtml(dest.name)}</a>${taxi?`<button type="button" data-name="${escAttr(dest.name)}" data-nav="${escAttr(dest.nav)}" onclick="showDriverCard(this.dataset.name,this.dataset.nav)">給司機看</button>`:''}</div>`;
+}
+/* 給司機看的日文資料（日文名稱、在哪裡下車）。可在編輯模式修改，修改會同步給家人。
+   地址只放有確認過的；不確定的就不寫，避免讓司機開錯地方。比對時名稱包含關鍵字即可。 */
+const DRIVER_INFO=[
+  ['水之謌',{ja:'しこつ湖鶴雅リゾートスパ 水の謌',drop:'ホテルの正面入口までお願いします。',dropZh:'到飯店正門口。'}],
+  ['日航札幌',{ja:'JRタワーホテル日航札幌',drop:'札幌駅南口、ホテルの正面入口までお願いします。',dropZh:'到札幌站南口、飯店正門口。'}],
+  ['湖の栖',{ja:'ザ レイクスイート 湖の栖（洞爺湖温泉）',drop:'ホテルの正面入口までお願いします。',dropZh:'到飯店正門口。'}],
+  ['OMO5',{ja:'OMO5小樽 by 星野リゾート',drop:'ホテルの正面入口までお願いします。',dropZh:'到飯店正門口。'}],
+  ['山鄉春',{drop:'宿の入口までお願いします。',dropZh:'到住宿入口。'}],
+  ['新千歲',{ja:'新千歳空港',drop:'国際線ターミナルでお願いします。',dropZh:'到國際線航廈。'}],
+  ['北海道廳',{ja:'北海道庁旧本庁舎（赤れんが庁舎）'}],
+  ['莫埃來沼',{ja:'モエレ沼公園',drop:'ガラスのピラミッドの近くの駐車場でお願いします。',dropZh:'到玻璃金字塔附近的停車場。'}],
+  ['場外市場',{ja:'札幌場外市場'}],
+  ['三上商店',{ja:'マルサン三上商店（札幌場外市場）'}],
+  ['花窗玻璃',{ja:'小樽芸術村 ステンドグラス美術館'}],
+  ['鱗友朝市',{ja:'鱗友朝市（小樽）'}],
+  ['堺町',{ja:'小樽 堺町通り'}],
+  ['圓山公園',{ja:'円山公園'}],
+  ['北海道神宮',{ja:'北海道神宮'}],
+  ['中島公園',{ja:'中島公園'}],
+  ['藻岩山',{ja:'もいわ山ロープウェイ 山麓駅',drop:'もいわ山ロープウェイの山麓駅でお願いします。',dropZh:'到藻岩山纜車山麓站。'}],
+  ['有珠山',{ja:'有珠山ロープウェイ 山麓駅'}],
+  ['白色戀人',{ja:'白い恋人パーク'}],
+  ['洞爺湖溫泉',{ja:'洞爺湖温泉'}],
+  ['札幌站',{ja:'JR札幌駅'}],
+  ['南小樽',{ja:'JR南小樽駅'}],
+  ['小樽站',{ja:'JR小樽駅'}],
+  ['錢函站',{ja:'JR銭函駅'}],
+  ['千歲站',{ja:'JR千歳駅'}]
+];
+const DRIVER_FIELDS=['ja','addr','drop','dropZh'];
+function driverInfo(name){
+  const hit=DRIVER_INFO.find(([k])=>String(name).includes(k));
+  const base=hit?hit[1]:{};const key='drv:'+name,out={};
+  DRIVER_FIELDS.forEach(f=>{const v=currentFieldValue(key,f,base[f]||null);if(v)out[f]=v;});
+  return out;
+}
+function showDriverCard(name,nav){
+  document.getElementById('driverCard')?.remove();
+  const info=driverInfo(name);
+  const el=document.createElement('div');el.id='driverCard';el.className='driver-card';
+  el.innerHTML=`<div class="driver-card-inner">
+    <p class="driver-ja">ここまでお願いします</p><p class="driver-zh">（請載我到這裡）</p>
+    <div class="driver-name${String(info.ja||name).length>12?' long':''}">${escHtml(info.ja||name)}</div>${info.ja&&info.ja!==name?`<div class="driver-name-zh">${escHtml(name)}</div>`:''}
+    ${info.addr?`<div class="driver-addr"><small>住所</small>${escHtml(info.addr)}</div>`:''}
+    ${info.drop?`<div class="driver-drop"><small>降りる場所</small><b>${escHtml(info.drop)}</b>${info.dropZh?`<span>${escHtml(info.dropZh)}</span>`:''}</div>`:''}
+    <a class="driver-map" href="${escAttr(mapsLink(nav))}" target="_blank" rel="noopener">打開地圖給司機看</a>
+    <button type="button" class="driver-edit edit-only">修改日文名稱／下車地點</button>
+    <button type="button" class="driver-close">關閉</button></div>`;
+  el.querySelector('.driver-close').onclick=()=>el.remove();
+  el.querySelector('.driver-edit').onclick=()=>{el.remove();editDriverInfo(name,nav);};
+  el.addEventListener('click',e=>{if(e.target===el)el.remove();});
+  document.body.appendChild(el);
+}
+function editDriverInfo(name,nav){
+  const info=driverInfo(name),key='drv:'+name;
+  openFormModal({title:'給司機看：'+name,fields:[
+    {id:'ja',label:'日文名稱（司機看的大字）',value:info.ja||'',placeholder:'例：JRタワーホテル日航札幌'},
+    {id:'addr',label:'日文地址（選填）',value:info.addr||''},
+    {id:'drop',label:'在哪裡下車（日文，給司機看）',type:'textarea',rows:2,value:info.drop||'',placeholder:'例：正面入口までお願いします。'},
+    {id:'dropZh',label:'在哪裡下車（中文，給自己看）',type:'textarea',rows:2,value:info.dropZh||''}],saveText:'儲存',
+    onSave:v=>{DRIVER_FIELDS.forEach(f=>{fieldOverrideStore[fieldOverrideKey(key,f)]=v[f]||'';});persistFieldOverrides();showDriverCard(name,nav);}});
 }
 function transportAddBarHTML(dayIdx){
   return `<div class="tp-add edit-only"><button type="button" onclick="addTransportStep(${dayIdx})">＋ 新增交通步驟</button></div>${transportSegmentExtrasHTML(dayIdx,'panel')}`;

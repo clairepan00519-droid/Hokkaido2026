@@ -2267,3 +2267,50 @@ body.large-text .header-tools .ht-pill{font-size:14.5px!important;}
 body.large-text .bottom-nav button .lb{font-size:15.5px!important;}
 body.large-text .nav-img{width:40px!important;height:40px!important;}
 body.large-text .sub-spot-card.open>.sub-spot-header h4{font-size:19px!important;}
+
+/* ===== hk11：新手／長輩友善（移植自京丹雅行 v81、v83，配色改成雪羽藍） ===== */
+/* 登入畫面：文字放大；輸入框 17px（iPhone 小於 16px 會自動放大畫面） */
+.family-gate-card p{font-size:15px!important;}
+.family-gate-card input{font-size:17px!important;padding:15px 16px!important;}
+.family-gate-card button{font-size:17px!important;min-height:52px;}
+.family-gate-error{font-size:15px!important;}
+/* 只看模式提示 */
+.relogin-banner{display:flex;align-items:center;gap:10px;margin:8px 12px;padding:12px 14px;border-radius:16px;background:#FFF6DC;border:1.5px solid #E6C56E;color:#5E4600;font-size:14.5px;font-weight:700;line-height:1.5;}
+.relogin-banner span{flex:1;}
+.relogin-banner button{flex:none;min-height:46px;padding:0 16px;border:0;border-radius:999px;background:var(--blue);color:#fff;font:inherit;font-size:15px;font-weight:900;cursor:pointer;}
+/* 編輯模式提示列（旅行模式不顯示） */
+.edit-mode-bar{display:none;}
+body.mode-edit .edit-mode-bar{display:flex;position:sticky;top:0;z-index:600;align-items:center;gap:10px;margin:0 0 6px;padding:10px 14px;background:#5B4A8C;color:#fff;font-size:14.5px;font-weight:800;box-shadow:0 4px 12px rgba(40,40,90,.3);}
+body.mode-edit .edit-mode-bar span{flex:1;}
+body.mode-edit .edit-mode-bar button{flex:none;min-height:42px;padding:0 16px;border:0;border-radius:999px;background:#fff;color:#5B4A8C;font:inherit;font-size:15px;font-weight:900;cursor:pointer;}
+.header-tools #modeBtn.edit{background:#5B4A8C!important;color:#fff!important;}
+/* 每段交通：導航／給司機看 */
+.tp-go{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.tp-go a,.tp-go button{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:999px;font:inherit;font-size:14.5px;font-weight:900;text-decoration:none;cursor:pointer;text-align:center;}
+.tp-go a{background:linear-gradient(135deg,var(--blue),#3F6CC4);color:#fff!important;border:0;}
+.tp-go button,.stay-quick-driver{background:#FFF6DC;color:#7A5600;border:1.5px solid #E6C56E;}
+body.large-text .tp-go a,body.large-text .tp-go button{font-size:16px!important;}
+.stay-quick-driver{flex:none;min-height:30px;padding:0 12px;border-radius:999px;font:inherit;font-size:12px;font-weight:900;cursor:pointer;}
+/* 給司機看：全螢幕大字 */
+.driver-card{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(10,18,40,.72);}
+.driver-card-inner{width:min(440px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:24px;padding:26px 22px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+.driver-ja{margin:0;font-size:25px;white-space:nowrap;font-weight:900;color:var(--blue);line-height:1.3;}
+.driver-zh{margin:4px 0 14px;font-size:15px;color:#5A6680;}
+.driver-name{font-size:36px;font-weight:900;line-height:1.25;color:#141A2A;word-break:break-word;margin-bottom:6px;}
+.driver-name.long{font-size:28px;}
+.driver-name-zh{font-size:15px;color:#5A6680;margin-bottom:14px;}
+.driver-addr,.driver-drop{text-align:left;margin:0 0 12px;padding:12px 14px;border-radius:14px;background:#EEF2FA;}
+.driver-addr small,.driver-drop small{display:block;font-size:12.5px;font-weight:800;color:#5A6680;margin-bottom:4px;}
+.driver-addr{font-size:19px;font-weight:800;color:#141A2A;line-height:1.5;}
+.driver-drop b{display:block;font-size:21px;line-height:1.5;color:#141A2A;}
+.driver-drop span{display:block;margin-top:6px;font-size:14.5px;line-height:1.6;color:#4A5570;}
+.driver-map,.driver-close,.driver-edit{display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;border-radius:16px;font:inherit;font-size:17px;font-weight:900;text-decoration:none;cursor:pointer;margin-bottom:10px;}
+.driver-map{background:linear-gradient(135deg,var(--blue),#3F6CC4);color:#fff!important;border:0;}
+.driver-edit{min-height:46px;font-size:15px;border:1.5px dashed #8E7CC3;background:#F8F6FE;color:#4B3A82;}
+body.mode-travel .driver-edit{display:none;}
+.driver-close{background:#E7ECF6;color:#27478C;border:0;margin-bottom:0;}
+/* 日期晶片與小字：標準字也至少 12px */
+.day-chip .m,.today-chip{font-size:12.5px!important;}
+.net-status .net-txt{font-size:12px!important;}
+/* 提示訊息沒有復原鈕時 */
+#undoToastButton[hidden]{display:none!important;}

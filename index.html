@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=Caveat:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="preload" href="fonts/ChenYuluoyan-Thin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=hk9">
+<link rel="stylesheet" href="style.css?v=hk11">
 <link rel="stylesheet" href="splash.css?v=hk9">
 <link rel="stylesheet" href="snowbird/snowbird-widget.css?v=hk9">
 </head>
@@ -31,11 +31,11 @@
   <div class="family-gate-card">
     <img class="family-gate-img" src="images/logo.webp" alt="雪羽慢旅" width="84" height="84">
     <h2>北海道冬旅・家庭行程</h2>
-    <p>請使用在 Supabase Authentication 建立的家人帳號登入。登入後，各裝置會安全共用同一份行程資料。</p>
-    <input id="familyGateEmail" type="email" inputmode="email" autocomplete="username" placeholder="家人 Email">
-    <input id="familyGateInput" type="password" autocomplete="current-password" placeholder="Password">
+    <p>請輸入家人帳號的 Email 和密碼。<br>只要登入一次，這支手機之後打開就會自動進入，全家看到的是同一份行程。</p>
+    <input id="familyGateEmail" type="email" inputmode="email" autocomplete="username" placeholder="Email（例：name@gmail.com）" aria-label="Email">
+    <input id="familyGateInput" type="password" autocomplete="current-password" placeholder="密碼" aria-label="密碼">
     <button id="familyGateButton" type="button">登入行程</button>
-    <button id="offlineGateButton" class="family-offline-button" type="button" hidden>離線查看已下載行程</button>
+    <button id="offlineGateButton" class="family-offline-button" type="button" hidden>先看行程（暫時不同步）</button>
     <div id="familyGateError" class="family-gate-error" role="alert"></div>
   </div>
 </div>
@@ -71,8 +71,8 @@
       </div>
       <div class="header-tools">
         <button type="button" class="ht-btn ht-fav" id="favCorner" onclick="openMarksPanel('fav')" aria-label="收藏與預約">★<span class="ht-badge" id="favBadge" style="display:none"></span></button>
-        <button type="button" class="ht-pill" id="modeBtn" onclick="toggleUiMode()">旅行</button>
-        <button type="button" class="ht-pill" id="sizeBtn" onclick="toggleTextSize()">標準字</button>
+        <button type="button" class="ht-pill" id="modeBtn" onclick="toggleUiMode()">✎ 編輯</button>
+        <button type="button" class="ht-pill" id="sizeBtn" onclick="toggleTextSize()">字放大</button>
         <button type="button" class="ht-btn" onclick="openToolsSheet()" aria-label="工具與設定">⚙️</button>
       </div>
     </div>
