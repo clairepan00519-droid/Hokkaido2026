@@ -78,21 +78,38 @@ function unlockFamilySite({offline=false}={}){
   if(gate){ gate.hidden=true; gate.setAttribute('aria-hidden','true'); }
   if(!offline) startFamilyCloud();
 }
+function loginErrorText(e,status){
+  const m=String(e&&e.message||e||'');
+  if(/Invalid login credentials/i.test(m))return 'Email 或密碼不正確。請確認是在「這個」Supabase 專案的 Authentication → Users 建立的帳號，密碼大小寫也要一致。';
+  if(/Email not confirmed/i.test(m))return '這個帳號還沒驗證。請到 Supabase → Authentication → Users，點該帳號選「Confirm user」，或刪掉重建時勾選 Auto Confirm User。';
+  if(/Invalid API key|No API key|apikey/i.test(m)||status===401)return 'Supabase 金鑰不正確。請確認 config.js 裡貼的是 Project Settings → API 的「anon public」key（不是 service_role），而且整串完整沒有斷行。';
+  if(status===404||/not found/i.test(m))return '找不到這個 Supabase 專案。請確認 config.js 的網址是 https://xxxx.supabase.co，最後不要多加路徑。';
+  if(/timeout|Abort/i.test(m))return '連線逾時。Supabase 專案可能被暫停（免費方案一週沒用會自動暫停），請到 Supabase 首頁按「Restore project」，等幾分鐘再試。';
+  if(e instanceof TypeError||/Failed to fetch|Load failed|NetworkError/i.test(m))return '連不到 Supabase。請確認網路正常、config.js 的網址正確，以及專案沒有被暫停。';
+  return m||'登入失敗，請稍後再試。';
+}
 async function submitFamilyGate(){
   const email=document.getElementById('familyGateEmail');
   const input=document.getElementById('familyGateInput');
   const err=document.getElementById('familyGateError');
   const btn=document.getElementById('familyGateButton');
   if(!input||!btn) return;
-  btn.disabled=true;
+  const label=btn.textContent; btn.disabled=true; btn.textContent='登入中…';
   if(err) err.textContent='';
+  let status=0;
   try{
     if(!navigator.onLine)throw new Error('目前離線；若這台裝置曾登入，可使用下方離線查看。');
-    const r=await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`,{method:'POST',headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:(email?.value||'').trim(),password:input.value})});
-    const data=await r.json();if(!r.ok)throw new Error(data.error_description||data.msg||'Email 或密碼不正確');
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),15000);
+    let r;
+    try{ r=await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`,{method:'POST',signal:ctrl.signal,headers:{apikey:SUPABASE_ANON_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:(email?.value||'').trim(),password:input.value})}); }
+    catch(fe){ throw (fe&&fe.name==='AbortError')?new Error('timeout'):fe; }
+    finally{ clearTimeout(t); }
+    status=r.status;
+    let data={}; try{data=await r.json();}catch(_){}
+    if(!r.ok)throw new Error(data.error_description||data.msg||data.message||data.error||`HTTP ${r.status}`);
     saveAuthSession(data);unlockFamilySite();input.value='';
-  }catch(e){ if(err) err.textContent=String(e.message||e); input.select(); }
-  finally{ btn.disabled=false; }
+  }catch(e){ if(err) err.textContent=loginErrorText(e,status); input.select(); }
+  finally{ btn.disabled=false; btn.textContent=label; }
 }
 async function initAuthGate(){
   if(!CLOUD_CONFIGURED){ unlockFamilySite({offline:true}); document.body.classList.add('cloud-unconfigured'); return; }
@@ -178,8 +195,8 @@ document.addEventListener('DOMContentLoaded',()=>{
    不依賴外部 Supabase SDK 或 Realtime WebSocket，避免 CDN／WebSocket
    在手機、公司或醫院網路被攔截。每 12 秒檢查一次家人更新。 */
 /* ▼▼▼ 新 Supabase 專案建立後，把下面兩行換成「Project Settings → API」裡的 URL 與 anon public key ▼▼▼ */
-const SUPABASE_URL = "";
-const SUPABASE_ANON_KEY = "";
+const SUPABASE_URL = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_URL||"").trim().replace(/\/+$/,"");
+const SUPABASE_ANON_KEY = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_ANON_KEY||"").trim();
 /* ▲▲▲ 兩行都留空時，網站以「單機預覽模式」運作：不需登入、資料只存在這台裝置 ▲▲▲ */
 const CLOUD_CONFIGURED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 
@@ -2692,7 +2709,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk9-2026-10-03';
+const APP_VERSION='hk10-2026-10-04';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
