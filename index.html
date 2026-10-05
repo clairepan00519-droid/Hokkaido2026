@@ -21,9 +21,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=Caveat:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="preload" href="fonts/ChenYuluoyan-Thin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=hk11">
+<link rel="stylesheet" href="style.css?v=hk12">
 <link rel="stylesheet" href="splash.css?v=hk9">
-<link rel="stylesheet" href="snowbird/snowbird-widget.css?v=hk9">
+<link rel="stylesheet" href="snowbird/snowbird-widget.css?v=hk12">
 </head>
 <body class="family-locked">
 
@@ -37,6 +37,9 @@
     <button id="familyGateButton" type="button">登入行程</button>
     <button id="offlineGateButton" class="family-offline-button" type="button" hidden>先看行程（暫時不同步）</button>
     <div id="familyGateError" class="family-gate-error" role="alert"></div>
+    <button id="gateCheckButton" class="family-check-button" type="button" onclick="runConnectionCheck()">登不進去？按這裡檢查連線</button>
+    <div id="gateCheckResult" class="gate-check-result" hidden></div>
+    <small class="gate-version" id="gateVersion"></small>
   </div>
 </div>
 
@@ -195,16 +198,6 @@
 
   <!-- ================= WEATHER VIEW ================= -->
   <div class="view" id="view-weather">
-    <div class="section-card snow-section" style="margin-bottom:14px;">
-      <h3><img class="h-ic" src="images/bird-snowball.webp" alt="" width="28" height="28"> 今日雪況與降雪提醒</h3>
-      <div class="sub">各地現在的積雪、過去 24 小時新雪、接下來 12 小時會不會下雪，以及路面好不好走。出發前 16 天內，行程日的降雪預報也會顯示在每天的行程頁。</div>
-      <div id="snowAlertBox"></div>
-      <div id="snowNowList" class="snow-now-list"></div>
-      <div class="add-row" style="margin:10px 0 0;">
-        <button onclick="prefetchSnow(true)" style="flex:1; background:var(--blue); color:#fff; border:none; border-radius:999px; padding:10px 0; font-family:inherit; font-weight:700; font-size:13.5px; cursor:pointer; box-shadow:var(--shadow-sm);">🔄 更新雪況</button>
-      </div>
-      <div class="source-note" id="snowNowTime"></div>
-    </div>
     <div class="section-card" style="margin-bottom:14px;">
       <h3><img class="h-ic" src="images/nav-weather.webp" alt="" width="28" height="28"> 即時氣象與雪國穿搭指南</h3>
       <div class="sub">以日本氣象廳（JMA）模式的預報數值顯示千歲、札幌、洞爺湖與小樽的氣溫、風雪與穿搭建議；每個地點下方都有 tenki.jp 逐時／10 天預報連結。</div>
@@ -215,6 +208,16 @@
       <div id="liveWeatherList"></div>
       <div class="source-note" id="liveWeatherTime">即時資料尚未更新</div>
     </div>
+    <details class="section-card snow-section" id="snowSection" style="margin-bottom:14px;" ontoggle="try{localStorage.setItem('hokkaido_snow_open',this.open?'1':'0')}catch(e){}">
+      <summary class="snow-sum"><img class="h-ic" src="images/weather/snowbird-light-snow.webp" alt="" width="40" height="40"><span><b>今日雪況與降雪提醒</b><small id="snowSumLine">積雪、新雪、接下來會不會下雪、路面</small></span><i aria-hidden="true">▾</i></summary>
+      <div class="sub">各地現在的積雪、過去 24 小時新雪、接下來 12 小時會不會下雪，以及路面好不好走。出發前 16 天內，行程日的降雪預報也會顯示在每天的行程頁。</div>
+      <div id="snowAlertBox"></div>
+      <div id="snowNowList" class="snow-now-list"></div>
+      <div class="add-row" style="margin:10px 0 0;">
+        <button onclick="prefetchSnow(true)" style="flex:1; background:var(--blue); color:#fff; border:none; border-radius:999px; padding:10px 0; font-family:inherit; font-weight:700; font-size:13.5px; cursor:pointer; box-shadow:var(--shadow-sm);">🔄 更新雪況</button>
+      </div>
+      <div class="source-note" id="snowNowTime"></div>
+    </details>
 
 
     <div class="section-card" style="margin-bottom:14px;">
@@ -318,10 +321,10 @@
 
 <input type="file" id="restoreFile" accept="application/json,.json" style="display:none" onchange="restoreBackupFile(event)">
 
-<script src="config.js?v=hk11"></script>
+<script src="config.js?v=hk12"></script>
 <script src="snowbird/snowbird-content.js?v=hk9"></script>
-<script src="snowbird/snowbird-widget.js?v=hk9"></script>
-<script src="app.js?v=hk11"></script>
+<script src="snowbird/snowbird-widget.js?v=hk12"></script>
+<script src="app.js?v=hk12"></script>
 
 
 <div id="hokkaidoSplash" class="splash" hidden aria-label="雪羽慢旅載入中">

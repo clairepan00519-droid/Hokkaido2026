@@ -116,6 +116,7 @@ async function submitFamilyGate(){
     status=r.status;
     let data={}; try{data=await r.json();}catch(_){}
     if(!r.ok)throw new Error(data.error_description||data.msg||data.message||data.error||`HTTP ${r.status}`);
+    if(!data.access_token)throw new Error('登入回應不完整，請按下方「檢查連線」');
     saveAuthSession(data);hideReloginBanner();unlockFamilySite();input.value='';
   }catch(e){ if(err) err.textContent=loginErrorText(e,status); input.select(); }
   finally{ btn.disabled=false; btn.textContent=label; }
@@ -146,6 +147,26 @@ async function initAuthGate(){
   setTimeout(()=>document.getElementById('familyGateEmail')?.focus(),80);
 }
 document.addEventListener('DOMContentLoaded',initAuthGate);
+/* hk12：登入畫面的「檢查連線」，一步步告訴使用者卡在哪裡 */
+async function runConnectionCheck(){
+  const box=document.getElementById('gateCheckResult');if(!box)return;
+  box.hidden=false;box.innerHTML='檢查中…';
+  const rows=[];const add=(ok,t)=>{rows.push(`<li class="${ok?'ok':'bad'}">${ok?'✅':'❌'} ${t}</li>`);box.innerHTML=`<ul>${rows.join('')}</ul>`;};
+  add(true,'網站版本：'+(typeof APP_VERSION!=='undefined'?APP_VERSION:'?'));
+  if(!CLOUD_CONFIGURED){add(false,'config.js 沒有填 Supabase 網址或金鑰');return;}
+  add(true,'Supabase 網址：'+SUPABASE_URL.replace(/^https:\/\//,''));
+  if(!navigator.onLine){add(false,'這支手機目前沒有網路');return;}
+  try{
+    const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),12000);
+    const r=await fetch(`${SUPABASE_URL}/auth/v1/settings`,{headers:{apikey:SUPABASE_ANON_KEY},signal:ctrl.signal});clearTimeout(t);
+    if(r.ok)add(true,'連得到 Supabase，金鑰正確');
+    else if(r.status===401||r.status===403)add(false,'Supabase 金鑰不正確（config.js 的 anon / publishable key）');
+    else add(false,'Supabase 回應異常（HTTP '+r.status+'），專案可能被暫停：請到 Supabase 首頁按 Restore project');
+  }catch(e){add(false,(e&&e.name==='AbortError')?'連線逾時：Supabase 專案可能被暫停（免費方案一週沒用會暫停）':'連不到 Supabase：請確認網路，或換 Wi-Fi／行動網路再試');return;}
+  const sess=readAuthSession();
+  add(!!sess,sess?'這支手機已登入過（'+(sess.email||'家人帳號')+'）':'這支手機還沒登入過：請輸入 Email 與密碼');
+}
+document.addEventListener('DOMContentLoaded',()=>{const v=document.getElementById('gateVersion');if(v&&typeof APP_VERSION!=='undefined')v.textContent='版本 '+APP_VERSION;});
 /* 清除 v40 曾放在標頭中央的提示列；即使舊 HTML 被瀏覽器短暫還原也不會再顯示。 */
 function removeLegacyHeaderStatus(){
   document.querySelectorAll('.header-action-row,#offlineReadyStatus,#todayModeButton').forEach(el=>el.remove());
@@ -256,7 +277,19 @@ async function uploadMediaBlob(blob, folder='uploads'){
   return publicMediaUrl(path);
 }
 async function uploadMediaFile(file, folder){ return uploadMediaBlob(await compressImageToBlob(file),folder); }
-async function uploadLegacyDataUrl(dataUrl, folder){ const blob=await (await fetch(dataUrl)).blob(); return uploadMediaBlob(blob,folder); }
+async function uploadLegacyDataUrl(dataUrl, folder){
+  /* hk12：先確認這台裝置上真的找得到原檔；找不到（例如換了手機、清過瀏覽器）就不要上傳空檔案 */
+  const res=await fetch(dataUrl);
+  if(!res.ok)throw Object.assign(new Error('這台裝置上找不到這張舊照片的原檔'),{missingLocal:true});
+  let blob=await res.blob();
+  if(!blob||!blob.size)throw Object.assign(new Error('這台裝置上找不到這張舊照片的原檔'),{missingLocal:true});
+  if(!/^image\//.test(blob.type||'')){
+    const m=String(dataUrl).match(/^data:(image\/[a-z+.-]+)/i)||String(dataUrl).match(/\.(png|webp|jpe?g|heic|heif)(\?|$)/i);
+    const t=m?(m[1].includes('/')?m[1]:'image/'+m[1].toLowerCase().replace('jpg','jpeg')):'image/jpeg';
+    blob=new Blob([blob],{type:t});
+  }
+  return uploadMediaBlob(blob,folder);
+}
 function isLegacyDataUrl(v){ return typeof v==='string' && (/^data:image\//i.test(v) || (CLOUD_CONFIGURED && /(^|\/)local-media\//.test(v))); }
 /* 單機預覽模式的照片：存進瀏覽器的 Cache Storage（容量比 localStorage 大很多），
    由 Service Worker 以 local-media/<id> 網址提供。接上 Supabase 後會自動搬到雲端。 */
@@ -276,9 +309,16 @@ async function saveLocalMedia(blob){
 async function migrateMediaTree(value, folder='legacy', progress=null){
   if(isLegacyDataUrl(value)){
     if(progress) progress.total++;
-    const url=await uploadLegacyDataUrl(value,folder);
-    if(progress){ progress.done++; updateMigrationStatus(progress); }
-    return url;
+    /* hk12：單張失敗不會讓整個同步停住；保留原本的值（不刪除），之後還可以再試 */
+    try{
+      const url=await uploadLegacyDataUrl(value,folder);
+      if(progress){ progress.done++; updateMigrationStatus(progress); }
+      return url;
+    }catch(e){
+      console.warn('舊照片搬到雲端失敗，先保留原本的資料',e);
+      if(progress){ progress.failed=(progress.failed||0)+1; progress.lastError=e; }
+      return value;
+    }
   }
   if(Array.isArray(value)){
     const out=[];
@@ -436,7 +476,16 @@ function reportUploadError(err){
   alert('⚠️ '+msg+'\n'+String((err&&err.message)||err||''));
 }
 function friendlySyncError(e){
-  const msg=String(e&&e.message||e||'未知錯誤');
+  let msg=String(e&&e.message||e||'未知錯誤');
+  /* hk12：Supabase 回傳的 JSON 錯誤（{"statusCode":...,"error":...,"message":...}）轉成看得懂的中文，不再直接顯示原始碼 */
+  try{const j=JSON.parse(msg);if(j&&typeof j==='object'){const code=String(j.statusCode||j.code||j.status||'');const t=[j.error,j.message,j.msg,j.error_description,j.hint].filter(Boolean).join(' ');
+    if(/mime|content type/i.test(t)||code==='415')return '照片格式不被雲端接受（請改用 JPG／PNG）';
+    if(/too large|exceed|size/i.test(t)||code==='413')return '照片太大，雲端拒收';
+    if(/bucket not found/i.test(t))return '圖片雲端空間尚未設定（請在 Supabase 執行 SUPABASE_SETUP.sql）';
+    if(/row-level security|unauthorized|permission/i.test(t)||code==='403'||code==='42501')return '雲端權限尚未設定（請在 Supabase 執行 SUPABASE_SETUP.sql）';
+    if(/jwt|token|expired/i.test(t)||code==='401')return '登入已過期，請重新登入';
+    if(/does not exist|PGRST205|42P01/i.test(t+code))return '尚未建立 hokkaido_sync 資料表（請在 Supabase 執行 SUPABASE_SETUP.sql）';
+    msg=(t||('錯誤代碼 '+code)).slice(0,60);}}catch(_){}
   if(/Failed to fetch|NetworkError/i.test(msg)) return '無法連上雲端資料庫';
   if(/relation.*hokkaido_sync.*does not exist|PGRST205/i.test(msg)) return '尚未建立 hokkaido_sync 資料表';
   if(/row-level security|permission denied|42501/i.test(msg)) return 'Supabase 權限尚未設定';
@@ -511,9 +560,13 @@ async function reconcileInitialCloudData(){
     cloudSync.applyingRemote=true;
     try{ replaceLocalJson(key,merged); applyStoreUpdate(key,JSON.stringify(merged)); }
     finally{ cloudSync.applyingRemote=false; }
-    const serverTime=await restUpsert(key,merged);
-    setSyncMeta(key,serverTime);setSyncBase(key,merged);
+    /* hk12：某一類寫入失敗時不讓整個同步停住，先放進待送清單稍後重試 */
+    try{
+      const serverTime=await restUpsert(key,merged);
+      setSyncMeta(key,serverTime);setSyncBase(key,merged);
+    }catch(e){console.warn('初次同步寫入失敗，稍後重試',key,e);cloudSync.pending[key]=merged;cloudSync.lastError=e;}
   }
+  if(hasPendingCloudPush()){clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,3000);}
 }
 
 async function pollCloudChanges(){
@@ -669,8 +722,9 @@ window.addEventListener('pagehide',()=>{if(cloudSync.enabled&&hasPendingCloudPus
 window.addEventListener('online',()=>{if(cloudSync.enabled&&hasPendingCloudPush()){cloudSync.retryDelay=0;clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,800);}});
 function updateSyncStatus(err,state){
   const el=document.getElementById('cloudSyncStatus');if(!el)return;el.style.display='inline-flex';el.classList.toggle('sync-error',!!err);el.classList.toggle('sync-saving',state==='saving'||state==='connecting');
-  if(err){el.textContent='⚠️ '+friendlySyncError(err);el.title=String(err&&err.message||err);}
+  if(err){el.textContent='⚠️ '+friendlySyncError(err);el.title=String(err&&err.message||err);el.onclick=()=>{if(confirm('⚠️ 同步遇到問題：\n'+friendlySyncError(err)+'\n\n你的資料都還存在這支手機上，不會遺失。\n要現在重新連線嗎？')){cloudSync.ready=false;cloudSync.enabled=false;startFamilyCloud();}};}
   else if(state==='connecting')el.textContent='☁️ 連線中';else if(state==='saving')el.textContent='☁️ 同步中';else el.textContent='☁️ 已同步';
+  if(!err)el.onclick=null;
 }
 /* ============ HEADER IMAGES ============ */
 const headerBgs = [];
@@ -1760,6 +1814,22 @@ const WMO = {
   95:['⛈️','雷雨'],96:['⛈️','雷雨挾冰雹'],99:['⛈️','強雷雨挾冰雹'],
 };
 function wmoInfo(code){ return WMO[code] || ['🌡️','—']; }
+/* hk12：北海道二月雪雀天氣圖（依天氣代碼、風速切換；雨天在二月多半是雨夾雪） */
+const WX_IMG={clear:['clear-cold','晴冷'],cloudy:['cloudy-cold','多雲'],overcast:['overcast-cold','陰冷'],light:['light-snow','小雪'],heavy:['heavy-snow','大雪'],blowing:['blowing-snow','風雪'],sleet:['sleet','雨夾雪'],icy:['icy-path','路面結冰']};
+function wxKind(code,wind){
+  code=Number(code);wind=Number(wind)||0;
+  const snow=[71,73,75,77,85,86].includes(code);
+  if(snow&&wind>=30)return 'blowing';
+  if([75,86].includes(code))return 'heavy';
+  if(snow)return 'light';
+  if(code>=95)return 'blowing';
+  if((code>=51&&code<=67)||(code>=80&&code<=82))return 'sleet';
+  if(code===3||code===45||code===48)return 'overcast';
+  if(code===2)return 'cloudy';
+  return 'clear';
+}
+function wxImgHTML(code,wind,cls='wx-img'){const [f,l]=WX_IMG[wxKind(code,wind)];return `<img class="${cls}" src="images/weather/snowbird-${f}.webp" alt="${l}" title="${l}" width="64" height="64" loading="lazy" decoding="async">`;}
+function feelsText(cw){return cw&&cw.apparent_temperature!=null?`體感 ${Math.round(cw.apparent_temperature)}°`:'';}
 
 function getDynamicTip(temp, code) {
   let tip = "";
@@ -1803,7 +1873,7 @@ async function fetchWeatherFor(k, attempt){
   const timeout = setTimeout(()=>controller.abort(), 9000);
   try{
     if(!navigator.onLine) throw new Error('OFFLINE');
-    const base = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,wind_speed_10m,precipitation,weather_code&daily=sunrise,sunset,uv_index_max&timezone=Asia%2FTokyo`;
+    const base = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,precipitation,snowfall,weather_code&daily=sunrise,sunset,uv_index_max,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo`;
     /* 優先使用日本氣象廳（JMA）模式的數值；若該模式暫時無資料，自動退回一般預報，避免整個天氣頁空白。 */
     let res = await fetch(base + '&models=jma_seamless', { signal: controller.signal }).catch(()=>null);
     let data = (res && res.ok) ? await res.json().catch(()=>null) : null;
@@ -1868,7 +1938,7 @@ async function loadLiveWeather(){
   wrap.innerHTML = Object.keys(CITIES).map(k=>`<div class="weather-day" id="live-${k}"><div class="date" style="width:auto; text-align:left;"><b style="font-size:12.5px;">${CITIES[k].label}</b></div><div class="mid"><div class="out">讀取中...</div></div></div>`).join('');
   if(timeEl) timeEl.textContent = '即時資料抓取中...';
 
-  await Promise.all(Object.keys(CITIES).map(k=>fetchWeatherFor(k, 0)));
+  await Promise.all([...Object.keys(CITIES).map(k=>fetchWeatherFor(k, 0)),fetchSpotsWeather(true),prefetchSnow(true)]);
 
   const failCount = Object.values(liveWeatherCache).filter(v=>v && v.error).length;
   const staleCount = Object.values(liveWeatherCache).filter(v=>v && v.stale).length;
@@ -1916,16 +1986,21 @@ function renderOneLiveCity(k){
     <details class="weather-city-card wc-details" ${isOpen?'open':''} ontoggle="weatherToggle('${k}',this.open)">
       <summary class="weather-primary wc-sum">
         <div class="wc-name"><strong>${CITIES[k].label}</strong>${badgeHtml}</div>
-        <span class="wc-ico">${ico}</span>
-        <div class="wc-temp"><b>${temp}<small>°C</small></b><em>${desc}</em></div>
+        <span class="wc-ico">${wxImgHTML(cw.weather_code,cw.wind_speed_10m)}</span>
+        <div class="wc-temp"><b>${temp}<small>°C</small></b><em>${feelsText(cw)||desc}</em></div>
         <i class="wc-chev" aria-hidden="true">▾</i>
       </summary>
       <div class="wc-body">
         <div class="weather-metrics" aria-label="氣象數據">
-          <span>風 ${wind} km/h</span>
-          <span>雨量 ${precip} mm</span>
+          <span>${desc}</span>
+          ${cw.apparent_temperature!=null?`<span>體感 ${Math.round(cw.apparent_temperature)}°C</span>`:''}
+          ${data.daily&&data.daily.temperature_2m_min?`<span>今日 ${Math.round(data.daily.temperature_2m_min[0])}～${Math.round(data.daily.temperature_2m_max[0])}°C</span>`:''}
+          <span>風 ${wind} km/h${cw.wind_gusts_10m!=null?`（陣風 ${Math.round(cw.wind_gusts_10m)}）`:''}</span>
+          ${cw.snowfall?`<span>降雪 ${cw.snowfall} cm/h</span>`:`<span>降水 ${precip} mm</span>`}
+          ${cw.relative_humidity_2m!=null?`<span>濕度 ${cw.relative_humidity_2m}%</span>`:''}
           <span>UV ${uvText}</span>
         </div>
+        <div class="wc-spots" id="spots-${k}">${spotsWeatherHTML(k)}</div>
         <div class="weather-sun-row">
           <span>日出 ${sr}</span>
           <span>日落 ${ss}</span>
@@ -1944,7 +2019,7 @@ function renderOneLiveCity(k){
    - 每日行程：這天走訪地區的降雪預報（出發前 16 天內才有），當天另顯示接下來幾小時
    - 日期晶片：預報大雪或暴風雪的日子出現小雪花 */
 const SNOW_CACHE_KEY='hokkaido_snow_v1';
-let snowCache=(()=>{try{return JSON.parse(localStorage.getItem(SNOW_CACHE_KEY))||{};}catch(e){return {};}})();
+var snowCache=(()=>{try{return JSON.parse(localStorage.getItem(SNOW_CACHE_KEY))||{};}catch(e){return {};}})();
 const SNOW_ICON='<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 2v20M4.2 6.5l15.6 11M4.2 17.5l15.6-11M9.5 3.5 12 6l2.5-2.5M9.5 20.5 12 18l2.5 2.5M2.8 9.6l3.4.9-.9 3.4M21.2 14.4l-3.4-.9.9-3.4M2.8 14.4l3.4-.9-.9-3.4M21.2 9.6l-3.4.9.9 3.4"/></svg>';
 function tokyoHourISO(d=new Date()){
   const t=new Date(d.getTime()+9*3600*1000);
@@ -2052,6 +2127,8 @@ function ensureSnowForDay(){
 }
 /* 天氣頁：今日雪況（各地卡片）＋提醒 */
 function renderSnowPanel(){
+  const sec=document.getElementById('snowSection');
+  if(sec&&!sec.dataset.init){sec.dataset.init='1';let o=null;try{o=localStorage.getItem('hokkaido_snow_open');}catch(e){}sec.open=o==='1';}
   const box=document.getElementById('snowAlertBox'),list=document.getElementById('snowNowList'),time=document.getElementById('snowNowTime');
   if(!box||!list)return;
   const keys=Object.keys(CITIES);
@@ -2070,7 +2147,7 @@ function renderSnowPanel(){
         <div><small>接下來12h</small><b>${fmtCm(s.next12)}<i>cm</i></b></div>
       </div>
       ${s.next12>=0.5?`<div class="snow-when">❄ ${s.startIn<=0?'現在或馬上':s.startIn+' 小時後'}開始下雪${s.gust>=50?`，陣風 ${Math.round(s.gust)} km/h`:''}</div>`:''}
-      <div class="snow-road"><b>路面</b><span>${escHtml(roadHint(s))}</span></div>
+      <div class="snow-road${/滑/.test(roadHint(s))?' icy':''}">${/滑/.test(roadHint(s))?'<img class="wx-img sm" src="images/weather/snowbird-icy-path.webp" alt="路面結冰" width="40" height="40">':''}<span><b>路面</b>${escHtml(roadHint(s))}</span></div>
     </div>`;
   }).join('');
   /* 提醒：接下來 12 小時有雪的地點＋行程日預報大雪 */
@@ -2081,6 +2158,18 @@ function renderSnowPanel(){
   if(trip.length)html+=`<div class="snow-banner trip">${SNOW_ICON}<div><b>行程日降雪預報</b><ul>${trip.map(x=>`<li${snowLevel(x.r)>=2?' class="heavy"':''}>D${days[x.i].dayNum}（${days[x.i].date}）${escHtml(x.r.city)}：約 ${fmtCm(x.r.snow)} cm${snowLevel(x.r)>=2?'・大雪／強風':''}</li>`).join('')}</ul></div></div>`;
   if(!html)html=`<div class="snow-banner ok">${SNOW_ICON}<div><b>降雪提醒</b><p>各地接下來 12 小時沒有明顯降雪。出發前 16 天內，行程日的降雪預報會自動顯示在這裡和每天的行程頁。</p></div></div>`;
   box.innerHTML=html;
+  /* 收合時也看得到重點 */
+  const sum=document.getElementById('snowSumLine');
+  if(sum){
+    const sp=snowNow('Sapporo');
+    const bits=[];
+    if(sp&&sp.depth!=null)bits.push(`札幌積雪 ${sp.depth} cm`);
+    if(soon.length)bits.push(`${soon.some(x=>x.s.next12>=5)?'⚠️ 大雪：':'❄ '}${soon.map(x=>CITIES[x.k].label.split('／')[0]).join('、')} 12 小時內會下雪`);
+    else bits.push('12 小時內沒有明顯降雪');
+    if(trip.some(x=>snowLevel(x.r)>=2))bits.push('行程日有大雪預報');
+    sum.textContent=bits.join('・');
+    sum.closest('summary')?.classList.toggle('alert',soon.some(x=>x.s.next12>=5)||trip.some(x=>snowLevel(x.r)>=2));
+  }
   if(time){const ts=keys.map(k=>snowCache[k]&&snowCache[k].at).filter(Boolean);time.textContent=ts.length?`雪況更新：${new Date(Math.min(...ts)).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}・積雪為 Open-Meteo 模型估計，實際以現場為準`:'';}
 }
 /* 每日天氣卡片裡的一行雪況 */
@@ -2091,6 +2180,41 @@ function snowLineHTML(k){
 setTimeout(()=>{renderSnowPanel();prefetchSnow(false);},2500);
 setInterval(()=>prefetchSnow(false),30*60*1000);
 window.addEventListener('online',()=>prefetchSnow(true));
+
+/* ============ hk12：即時氣象分得更細（各城市底下的景點：氣溫、體感、風、天氣） ============ */
+const LIVE_SPOTS={
+  Chitose:[['新千歲機場',42.7752,141.6923],['支笏湖溫泉',42.7739,141.4007]],
+  Sapporo:[['札幌站・大通',43.0618,141.3545],['圓山・北海道神宮',43.0543,141.3082],['藻岩山山頂',43.0216,141.3222],['莫埃來沼公園',43.1225,141.4269],['白色戀人公園',43.0889,141.2715]],
+  Toya:[['洞爺湖溫泉',42.5655,140.8193],['有珠山山頂',42.5440,140.8388]],
+  Otaru:[['小樽運河',43.1990,141.0006],['錢函',43.1353,141.2054]]
+};
+const SPOTS_WX_KEY='hokkaido_spots_wx_v1';
+var spotsWx=(()=>{try{return JSON.parse(localStorage.getItem(SPOTS_WX_KEY))||{};}catch(e){return {};}})();
+async function fetchSpotsWeather(force){
+  if(!navigator.onLine)return false;
+  if(!force&&spotsWx.at&&Date.now()-spotsWx.at<15*60*1000)return false;
+  const list=Object.entries(LIVE_SPOTS).flatMap(([k,arr])=>arr.map(a=>({k,name:a[0],lat:a[1],lon:a[2]})));
+  try{
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${list.map(x=>x.lat).join(',')}&longitude=${list.map(x=>x.lon).join(',')}&current=temperature_2m,apparent_temperature,wind_speed_10m,weather_code,snowfall&timezone=Asia%2FTokyo`;
+    const r=await fetch(u);if(!r.ok)return false;
+    let d=await r.json();if(!Array.isArray(d))d=[d];
+    const out={at:Date.now(),items:{}};
+    list.forEach((x,i)=>{const c=d[i]&&d[i].current;if(c)out.items[x.name]={t:c.temperature_2m,f:c.apparent_temperature,w:c.wind_speed_10m,code:c.weather_code,sn:c.snowfall,el:d[i].elevation};});
+    spotsWx=out;try{localStorage.setItem(SPOTS_WX_KEY,JSON.stringify(out));}catch(e){}
+    Object.keys(LIVE_SPOTS).forEach(k=>{const el=document.getElementById('spots-'+k);if(el)el.innerHTML=spotsWeatherHTML(k);});
+    return true;
+  }catch(e){return false;}
+}
+function spotsWeatherHTML(k){
+  const arr=LIVE_SPOTS[k]||[];if(!arr.length)return '';
+  const rows=arr.map(([name])=>{
+    const x=(spotsWx.items||{})[name];
+    if(!x)return `<div class="wsp"><span class="wsp-name">${escHtml(name)}</span><span class="wsp-na">讀取中…</span></div>`;
+    return `<div class="wsp">${wxImgHTML(x.code,x.w,'wx-img sm')}<span class="wsp-name">${escHtml(name)}${x.el>300?`<small>海拔約 ${Math.round(x.el)} m</small>`:''}</span><span class="wsp-t"><b>${Math.round(x.t)}°</b><em>體感 ${Math.round(x.f)}°</em></span><span class="wsp-w">💨 ${Math.round(x.w)}${x.sn?`<br>❄ ${x.sn}cm`:''}</span></div>`;
+  }).join('');
+  return `<div class="wsp-head">各景點即時</div>${rows}`;
+}
+setTimeout(()=>fetchSpotsWeather(false),3000);
 
 /* ============ 內嵌 Windy 天氣圖 ============ */
 function initRainRadar(){ refreshRainRadar(); }
@@ -2412,6 +2536,7 @@ async function migrateLegacyMediaToCloud(){
   if(changed){
     renderDayContent();renderShopList();renderRulesList();renderDocsList();
   }
+  if(progress.failed&&typeof showToast==='function')showToast(`有 ${progress.failed} 張舊照片暫時無法搬到雲端（${friendlySyncError(progress.lastError)}），已先保留，不會刪除。`);
   return progress.done>0;
 }
 
@@ -2939,7 +3064,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk11-2026-10-05';
+const APP_VERSION='hk12-2026-10-05';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -3457,11 +3582,11 @@ function dayWeatherPanelHTML(i){
     const sm=sun.match(/日出\s*(\d{1,2}:\d{2}).*日落\s*(\d{1,2}:\d{2})/);
     const sunRow=sm?`<div class="dw-sun2"><span>☀︎ 日出 ${sm[1]}</span><span>☾ 日落 ${sm[2]}</span></div>`:(sun?`<div class="dw-sun2"><span>${escHtml(sun)}</span></div>`:'');
     const tenki=`<a class="dw-tenki2" href="${escAttr(TENKI_LINKS[k]||'https://tenki.jp/')}" target="_blank" rel="noopener">tenki.jp 預報 ↗</a>`;
-    if(!cw)return `<div class="dw-card2 is-empty"><div class="dw-place2">${escHtml(CITIES[k].label)}</div><div class="dw-main2"><span class="dw-ico2">❄️</span><b class="dw-na">—</b></div><div class="dw-desc2">尚未取得即時氣象</div>${sunRow}${tenki}</div>`;
+    if(!cw)return `<div class="dw-card2 is-empty"><div class="dw-place2">${escHtml(CITIES[k].label)}</div><div class="dw-main2"><span class="dw-ico2">${wxImgHTML(2,0,'wx-img dim')}</span><b class="dw-na">—</b></div><div class="dw-desc2">尚未取得即時氣象</div>${sunRow}${tenki}</div>`;
     const [ico,desc]=wmoInfo(cw.weather_code),temp=Math.round(cw.temperature_2m);
     const tone=temp<=-5?'t-deep':temp<=0?'t-cold':temp<=8?'t-cool':'t-mild';
     const when=e.fetchedAt?new Date(e.fetchedAt).toLocaleString('zh-TW',{hour12:false,month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-    return `<div class="dw-card2 ${tone}"><div class="dw-place2">${escHtml(CITIES[k].label)}${e.stale?'<em>快取</em>':''}</div><div class="dw-main2"><span class="dw-ico2">${ico}</span><b>${temp}°</b></div><div class="dw-desc2">${desc}</div><div class="dw-metrics2"><span>💨 ${cw.wind_speed_10m} km/h</span><span>☔ ${cw.precipitation} mm</span></div>${snowLineHTML(k)}${sunRow}${when?`<small class="dw-when2">更新 ${when}</small>`:''}${tenki}</div>`;
+    return `<div class="dw-card2 ${tone}"><div class="dw-place2">${escHtml(CITIES[k].label)}${e.stale?'<em>快取</em>':''}</div><div class="dw-main2"><span class="dw-ico2">${wxImgHTML(cw.weather_code,cw.wind_speed_10m)}</span><b>${temp}°</b></div><div class="dw-desc2">${desc}${cw.apparent_temperature!=null?`・<b class="dw-feels">體感 ${Math.round(cw.apparent_temperature)}°</b>`:''}</div><div class="dw-metrics2"><span>💨 ${cw.wind_speed_10m} km/h</span><span>${cw.snowfall?`❄ ${cw.snowfall} cm`:`☔ ${cw.precipitation} mm`}</span></div>${snowLineHTML(k)}${sunRow}${when?`<small class="dw-when2">更新 ${when}</small>`:''}${tenki}</div>`;
   }).join('');
   return `<div class="day-panel dw2"><div class="dw2-head"><div><small>${d.date}（${d.weekday}）</small><strong>今日天氣與穿搭</strong></div><img src="images/nav-weather.webp" alt="" width="64" height="64"></div><div class="dw2-wear"><span class="dw2-wear-ic">🧣</span><div><small>建議穿搭</small><span>${escHtml(d.wear||'')}</span></div></div><div class="dw2-grid${cities.length>1?' two':''}">${cards}</div><button type="button" class="dp-btn" onclick="refreshDayWeather()">更新即時氣象</button><p class="dp-note">日出日落依 ${d.date} 計算；氣溫是「現在」的天氣，出發前 2–3 天再看 tenki.jp 預報。</p><button type="button" class="dp-link" onclick="setTab('weather')">看完整天氣與雨雲圖 ›</button></div>`;
 }
