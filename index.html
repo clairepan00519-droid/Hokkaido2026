@@ -7,6 +7,15 @@
 <script>/* hk13：開場動畫一打開就先蓋住畫面，不等整個網頁載完 */
 try{var d=document.documentElement;if((window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone||/[?&]splash=1/.test(location.search)){d.classList.add("show-splash");var seen=false;try{seen=sessionStorage.getItem("hokkaidoSplashSeen")==="1";sessionStorage.setItem("hokkaidoSplashSeen","1");}catch(e){}if(!seen||/[?&]splash=1/.test(location.search)){d.classList.add("splash-now");var v=["travel","map","wakeup"][Math.floor(Math.random()*3)];d.setAttribute("data-splash",v);var l=document.createElement("link");l.rel="preload";l.as="image";l.href="images/"+({travel:"splash-bird-suitcase",map:"splash-bird-gondola",wakeup:"splash-bird-berries"})[v]+".webp";document.head.appendChild(l);}}}catch(e){}</script>
 <style>html.splash-now,html.splash-now body{background:#EAF0FA;}html.splash-now #hokkaidoSplash{display:block!important;}</style>
+<script>/* hk14：程式若沒有正常啟動，直接在畫面上顯示原因，並提供「修復」按鈕 */
+(function(){var errs=[];
+function box(){var b=document.getElementById('bootDiag');if(!b&&document.body){b=document.createElement('div');b.id='bootDiag';b.style.cssText='position:fixed;left:12px;right:12px;bottom:12px;z-index:2147483646;background:#FFF1EE;border:2px solid #E9A398;border-radius:16px;padding:14px;font:15px/1.6 system-ui,sans-serif;color:#7E1F1F;box-shadow:0 10px 30px rgba(0,0,0,.2);max-height:60vh;overflow:auto';document.body.appendChild(b);}return b;}
+window.__bootErrors=errs;
+window.addEventListener('error',function(e){var t=e&&e.target;if(t&&t!==window){if(t.tagName==='SCRIPT'&&String(t.src).indexOf(location.origin)===0)errs.push('檔案載入失敗：'+t.src.split('/').pop());return;}if(!e.message)return;errs.push(e.message+' @ '+String(e.filename||'').split('/').pop()+':'+(e.lineno||'')+':'+(e.colno||''));},true);
+window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;errs.push('Promise：'+String(r&&r.message||r));});
+window.__repairApp=function(){var done=function(){var u=location.pathname+'?fresh='+Date.now();location.replace(u);};try{var ps=[];if(navigator.serviceWorker)ps.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}));if(window.caches)ps.push(caches.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k.indexOf('images-persist')<0&&k.indexOf('local-media')<0;}).map(function(k){return caches.delete(k);}));}));Promise.all(ps).then(done,done);}catch(x){done();}};
+window.addEventListener('load',function(){setTimeout(function(){if(window.__appReady)return;var b=box();if(!b)return;b.innerHTML='<b>⚠️ 網站程式沒有正常啟動</b><div style="margin:6px 0;font-size:13px;word-break:break-all">'+(window.__appReady?'':'主程式 app.js 沒有跑完。<br>')+errs.slice(0,5).map(function(x){return x.replace(/</g,'&lt;');}).join('<br>')+'<br><small>'+navigator.userAgent.replace(/</g,'')+'</small></div><button type="button" onclick="__repairApp()" style="width:100%;min-height:48px;border:0;border-radius:12px;background:#27478C;color:#fff;font:inherit;font-weight:800">清除舊版快取並重新載入（資料不會刪除）</button><div style="margin-top:6px;font-size:13px">如果還是不行，請把這個畫面截圖傳給我。</div>';},2500);});
+})();</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="64x64" href="images/favicon.png">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
@@ -340,7 +349,7 @@ try{var d=document.documentElement;if((window.matchMedia&&matchMedia("(display-m
 <script src="config.js?v=hk12"></script>
 <script src="snowbird/snowbird-content.js?v=hk9"></script>
 <script src="snowbird/snowbird-widget.js?v=hk12"></script>
-<script src="app.js?v=hk13"></script>
+<script src="app.js?v=hk14"></script>
 
 
 
