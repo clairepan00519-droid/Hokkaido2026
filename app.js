@@ -3064,7 +3064,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk13-2026-10-06';
+const APP_VERSION='hk14-2026-10-06';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -4766,3 +4766,5 @@ CRITTER_IMGS.length=0;for(let i=1;i<=8;i++)CRITTER_IMGS.push(`snowbird/assets/sn
 (function(){const d=document.querySelector('.route-timeline-card');if(!d)return;
   try{if(localStorage.getItem('hokkaido_rt_open')==='0')d.open=false;}catch(e){}
   d.addEventListener('toggle',()=>{try{localStorage.setItem('hokkaido_rt_open',d.open?'1':'0')}catch(e){}});})();
+/* hk14：主程式跑完的記號（給 index.html 的啟動檢查用） */
+window.__appReady=true;
