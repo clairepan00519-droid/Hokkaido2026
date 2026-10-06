@@ -3064,7 +3064,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk12-2026-10-05';
+const APP_VERSION='hk13-2026-10-06';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -4276,16 +4276,7 @@ function toggleSpotDetails(key){
 /* ---------- 開啟畫面：用標頭插圖與網站字體（安裝成 App 時才顯示） ---------- */
 /* 開場動畫：只在符合 show-splash 條件（安裝成 App 後開啟，或 ?splash=1）時，
    且這個瀏覽階段（session）還沒播過，才播放；不會擋住頁面本身的資料請求。 */
-(function(){
-  if(!document.documentElement.classList.contains('show-splash'))return;
-  const go=()=>{
-    if(!window.HokkaidoSplash)return;
-    if(sessionStorage.getItem('hokkaidoSplashSeen'))return;
-    try{sessionStorage.setItem('hokkaidoSplashSeen','1');}catch(e){}
-    HokkaidoSplash.play('random');
-  };
-  if(document.readyState==='complete')go();else window.addEventListener('load',go);
-})();
+/* hk13：改由 index.html 開頭與 splash.js 在頁面一開始就播放，這裡不再等 load */
 
 /* =====================================================================
    v56：訂位連結、營業時間、照片縮圖＋大圖檢視、交通新增／刪除／圖片、修正導航視窗、新插圖

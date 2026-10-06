@@ -7,7 +7,7 @@
   function closeSplash() {
     clearTimeout(timer);
     splash.classList.add('is-leaving');
-    setTimeout(() => { splash.hidden = true; splash.classList.remove('is-playing', 'is-leaving'); }, 340);
+    setTimeout(() => { splash.hidden = true; splash.classList.remove('is-playing', 'is-leaving'); document.documentElement.classList.remove('splash-now'); }, 340);
   }
 
   function playSplash(choice = 'travel', options = {}) {
@@ -22,4 +22,9 @@
   const skipBtn = splash.querySelector('.splash__skip');
   if (skipBtn) skipBtn.addEventListener('click', closeSplash);
   window.HokkaidoSplash = { play: playSplash, close: closeSplash };
+  /* hk13：頁面一開始就播放（不再等整個網頁和圖片都載完） */
+  const html = document.documentElement;
+  if (html.classList.contains('splash-now')) {
+    playSplash(html.getAttribute('data-splash') || 'travel');
+  }
 })();

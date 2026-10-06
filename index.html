@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#EAF0FA">
-<script>try{if((window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone||/[?&]splash=1/.test(location.search))document.documentElement.classList.add("show-splash");}catch(e){}</script>
+<script>/* hk13：開場動畫一打開就先蓋住畫面，不等整個網頁載完 */
+try{var d=document.documentElement;if((window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone||/[?&]splash=1/.test(location.search)){d.classList.add("show-splash");var seen=false;try{seen=sessionStorage.getItem("hokkaidoSplashSeen")==="1";sessionStorage.setItem("hokkaidoSplashSeen","1");}catch(e){}if(!seen||/[?&]splash=1/.test(location.search)){d.classList.add("splash-now");var v=["travel","map","wakeup"][Math.floor(Math.random()*3)];d.setAttribute("data-splash",v);var l=document.createElement("link");l.rel="preload";l.as="image";l.href="images/"+({travel:"splash-bird-suitcase",map:"splash-bird-gondola",wakeup:"splash-bird-berries"})[v]+".webp";document.head.appendChild(l);}}}catch(e){}</script>
+<style>html.splash-now,html.splash-now body{background:#EAF0FA;}html.splash-now #hokkaidoSplash{display:block!important;}</style>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="64x64" href="images/favicon.png">
 <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
@@ -22,10 +24,24 @@
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=Caveat:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="preload" href="fonts/ChenYuluoyan-Thin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="style.css?v=hk12">
-<link rel="stylesheet" href="splash.css?v=hk9">
+<link rel="stylesheet" href="splash.css?v=hk13">
 <link rel="stylesheet" href="snowbird/snowbird-widget.css?v=hk12">
 </head>
 <body class="family-locked">
+<div id="hokkaidoSplash" class="splash" hidden aria-label="雪羽慢旅載入中">
+  <button class="splash__skip" type="button">略過</button>
+  <div class="splash__stage">
+    <div class="splash__sun"></div>
+    <img class="splash__bird splash__deer--travel" src="images/splash-bird-suitcase.webp" alt="小山雀拖著行李出發">
+    <div class="splash__map-wrap">
+      <img class="splash__bird splash__deer--map" src="images/splash-bird-gondola.webp" alt="小山雀搭纜車">
+    </div>
+    <img class="splash__bird splash__deer--wakeup" src="images/splash-bird-berries.webp" alt="小山雀停在紅果枝上">
+    <i class="flake flake--1"></i><i class="flake flake--2"></i><i class="flake flake--3"></i><i class="flake flake--4"></i><i class="flake flake--5"></i>
+    <div class="splash__title"><strong>雪羽慢旅</strong><span>跟著小山雀，收藏北海道的冬日風景</span></div>
+  </div>
+</div>
+<script src="splash.js?v=hk13"></script>
 
 <div id="familyGate" class="family-gate" aria-hidden="false">
   <div class="family-gate-card">
@@ -324,22 +340,9 @@
 <script src="config.js?v=hk12"></script>
 <script src="snowbird/snowbird-content.js?v=hk9"></script>
 <script src="snowbird/snowbird-widget.js?v=hk12"></script>
-<script src="app.js?v=hk12"></script>
+<script src="app.js?v=hk13"></script>
 
 
-<div id="hokkaidoSplash" class="splash" hidden aria-label="雪羽慢旅載入中">
-  <button class="splash__skip" type="button">略過</button>
-  <div class="splash__stage">
-    <div class="splash__sun"></div>
-    <img class="splash__bird splash__deer--travel" src="images/splash-bird-suitcase.webp" alt="小山雀拖著行李出發">
-    <div class="splash__map-wrap">
-      <img class="splash__bird splash__deer--map" src="images/splash-bird-gondola.webp" alt="小山雀搭纜車">
-    </div>
-    <img class="splash__bird splash__deer--wakeup" src="images/splash-bird-berries.webp" alt="小山雀停在紅果枝上">
-    <i class="flake flake--1"></i><i class="flake flake--2"></i><i class="flake flake--3"></i><i class="flake flake--4"></i><i class="flake flake--5"></i>
-    <div class="splash__title"><strong>雪羽慢旅</strong><span>跟著小山雀，收藏北海道的冬日風景</span></div>
-  </div>
-</div>
-<script src="splash.js?v=hk9"></script>
+
 </body>
 </html>
