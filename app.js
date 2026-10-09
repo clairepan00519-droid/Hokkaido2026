@@ -253,8 +253,13 @@ function storageHeaders(contentType){
 }
 async function compressImageToBlob(file){
   if(!file.type.startsWith('image/')) return file;
-  const dataUrl = await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});
-  const img = await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=dataUrl;});
+  /* hk16：用 objectURL 讀圖（不再把整張大照片轉成超長文字），手機記憶體吃緊時比較不會卡住；
+     讀不出來的格式（例如部分 HEIC）就直接上傳原檔 */
+  const objUrl=URL.createObjectURL(file);
+  let img;
+  try{ img = await new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=objUrl;}); }
+  catch(e){ URL.revokeObjectURL(objUrl); return file; }
+  setTimeout(()=>URL.revokeObjectURL(objUrl),0);
   const MAX_DIM=1600; let w=img.naturalWidth,h=img.naturalHeight;
   if(w>MAX_DIM||h>MAX_DIM){if(w>h){h=Math.round(h*MAX_DIM/w);w=MAX_DIM;}else{w=Math.round(w*MAX_DIM/h);h=MAX_DIM;}}
   const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; canvas.getContext('2d').drawImage(img,0,0,w,h);
@@ -267,7 +272,12 @@ async function uploadMediaBlob(blob, folder='uploads'){
   await ensureAuthToken();
   const ext=blob.type==='image/png'?'png':blob.type==='image/webp'?'webp':'jpg';
   const path=makeMediaPath(folder,ext);
-  const r=await fetch(`${SUPABASE_URL}/storage/v1/object/${MEDIA_BUCKET}/${path}`,{method:'POST',headers:storageHeaders(blob.type||'application/octet-stream'),body:blob});
+  /* hk16：上傳最多等 90 秒，網路卡住時不會永遠停在「同步中」 */
+  const ctrl=new AbortController();const tmo=setTimeout(()=>ctrl.abort(),90000);
+  let r;
+  try{ r=await fetch(`${SUPABASE_URL}/storage/v1/object/${MEDIA_BUCKET}/${path}`,{method:'POST',headers:storageHeaders(blob.type||'application/octet-stream'),body:blob,signal:ctrl.signal}); }
+  catch(e){ throw (e&&e.name==='AbortError')?new Error('照片上傳逾時（網路太慢），請換個網路再試'):e; }
+  finally{ clearTimeout(tmo); }
   const text=await r.text();
   if(!r.ok){
     if(/Bucket not found|not found/i.test(text)) throw new Error('Supabase Storage 尚未設定，請執行 SUPABASE_SETUP.sql');
@@ -276,7 +286,14 @@ async function uploadMediaBlob(blob, folder='uploads'){
   }
   return publicMediaUrl(path);
 }
-async function uploadMediaFile(file, folder){ return uploadMediaBlob(await compressImageToBlob(file),folder); }
+async function uploadMediaFile(file, folder){
+  /* hk16：任何地方上傳照片都會在畫面下方顯示「上傳中」，完成才消失 */
+  window._upPending=(window._upPending||0)+1;window._upDone=window._upDone||0;
+  const show=()=>{const bt=window._upBatch;const t=bt?`第 ${bt.i+1}／${bt.total} 張`:`完成 ${window._upDone}／${window._upDone+window._upPending}`;if(typeof showUploadProgress==='function')showUploadProgress(`📷 照片上傳中（${t}），請先不要關掉`);};
+  show();
+  try{ return await uploadMediaBlob(await compressImageToBlob(file),folder); }
+  finally{ window._upPending--;window._upDone++; if(window._upPending<=0){window._upPending=0;window._upDone=0;if(typeof hideUploadProgress==='function')hideUploadProgress();} else show(); }
+}
 async function uploadLegacyDataUrl(dataUrl, folder){
   /* hk12：先確認這台裝置上真的找得到原檔；找不到（例如換了手機、清過瀏覽器）就不要上傳空檔案 */
   const res=await fetch(dataUrl);
@@ -1312,9 +1329,9 @@ async function handleRouteMapUpload(e, dayIdx){
   if(!routeMapStore[dayIdx]) routeMapStore[dayIdx] = [];
   updateSyncStatus(null,'saving');
   try{
-    const urls=[]; for(const f of files) urls.push(await uploadMediaFile(f,`route-maps/day-${dayIdx}`));
-    routeMapStore[dayIdx].push(...urls); persistRouteMaps(); renderDayContent();
-  }catch(err){ reportUploadError(err); updateSyncStatus(err); }
+    for(const f of files){ routeMapStore[dayIdx].push(await uploadMediaFile(f,`route-maps/day-${dayIdx}`)); persistRouteMaps(); }
+    renderDayContent();
+  }catch(err){ persistRouteMaps(); renderDayContent(); reportUploadError(err); updateSyncStatus(err); }
 }
 function removeRouteMap(dayIdx, i){
   if(!routeMapStore[dayIdx]) return;
@@ -1353,7 +1370,7 @@ async function handleTransportImageUpload(e,dayIdx,segmentKey='other'){
     const target=transportExtrasFor(dayIdx).images;
     for(const file of files)target.push({url:await uploadMediaFile(file,`transport/day-${dayIdx}`),segmentKey,title:file.name.replace(/\.[^.]+$/,'')||'交通圖片'});
     persistTransportExtras();renderDayContent();
-  }catch(err){reportUploadError(err);updateSyncStatus(err);}
+  }catch(err){persistTransportExtras();renderDayContent();reportUploadError(err);updateSyncStatus(err);}
 }
 function renameTransportImage(dayIdx,i){
   const image=transportExtrasFor(dayIdx).images[i];if(!image)return;
@@ -1681,12 +1698,32 @@ async function handlePhoto(e, idx){
   if(!files.length) return;
   if(!photoStore[idx]) photoStore[idx] = [];
   updateSyncStatus(null,'saving');
-  try{
-    const urls=[]; for(const f of files) urls.push(await uploadMediaFile(f,`spot-photos/${idx.replace(/[^a-zA-Z0-9_-]/g,'_')}`));
-    photoStore[idx].push(...urls); persistPhotos(); renderDayContent();
-    setTimeout(()=>{ const card=document.getElementById('spot-card-'+idx); if(card) card.classList.add('open'); },50);
-  }catch(err){ reportUploadError(err); updateSyncStatus(err); }
+  /* hk16：顯示「上傳中 2/5」；每張上傳成功就先存起來，某一張失敗也不會讓前面已上傳的照片消失 */
+  let ok=0,lastErr=null;
+  window._upBatch={i:0,total:files.length};
+  for(let i=0;i<files.length;i++){
+    window._upBatch.i=i;
+    try{
+      const url=await uploadMediaFile(files[i],`spot-photos/${idx.replace(/[^a-zA-Z0-9_-]/g,'_')}`);
+      if(!photoStore[idx]) photoStore[idx] = [];
+      photoStore[idx].push(url); persistPhotos(); ok++;
+    }catch(err){ lastErr=err; console.error('照片上傳失敗',err); }
+  }
+  window._upBatch=null;
+  if(ok){ renderDayContent(); reopenCard(idx); }
+  if(lastErr){
+    updateSyncStatus(lastErr);
+    if(ok) showToast(`已上傳 ${ok} 張，${files.length-ok} 張失敗：${friendlySyncError(lastErr)}`);
+    else reportUploadError(lastErr);
+  }else showToast(`已上傳 ${ok} 張照片`);
 }
+function showUploadProgress(text){
+  let el=document.getElementById('uploadProgress');
+  if(!el){el=document.createElement('div');el.id='uploadProgress';el.className='upload-progress';el.setAttribute('role','status');document.body.appendChild(el);}
+  el.textContent=text;el.hidden=false;
+}
+window.addEventListener('beforeunload',e=>{if((window._upPending||0)>0){e.preventDefault();e.returnValue='照片還在上傳中';}});
+function hideUploadProgress(){const el=document.getElementById('uploadProgress');if(el)el.hidden=true;}
 function movePhoto(e, idx, photoIdx, dir) {
   if(e)e.stopPropagation();
   const arr = photoStore[idx];
@@ -3064,7 +3101,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk15-2026-10-09';
+const APP_VERSION='hk16-2026-10-09';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
