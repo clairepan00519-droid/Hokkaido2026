@@ -2436,3 +2436,38 @@ details.snow-section[open]>summary.snow-sum{margin-bottom:10px;}
 .snow-road{display:flex;gap:8px;align-items:flex-start;}
 .snow-road .wx-img.sm{width:40px;height:40px;flex:none;}
 .snow-road span b{margin-right:6px;}
+
+/* ===== hk15：移植京丹雅行 v76–v84 的優化 ===== */
+/* 照片排序：有文字的按鈕（取代圖上看不懂的圓形箭頭） */
+.pm-order{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:6px 6px 0;}
+.pm-order button{min-height:34px;border:0;border-radius:8px;background:#FFF6DC;color:#7A5600;font:inherit;font-size:12px;font-weight:800;cursor:pointer;padding:0 2px;white-space:nowrap;}
+.pm-order button:only-child{grid-column:1/-1;}
+/* 已移出吃逛北海道的店家 */
+.eatshop-removed{margin:6px 12px 14px;border:1.5px dashed #ABC2EC;border-radius:16px;background:#F7F9FE;padding:4px 12px;}
+.eatshop-removed summary{min-height:48px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:900;color:var(--blue);cursor:pointer;}
+.eatshop-removed summary em{margin-left:auto;font-style:normal;font-size:13px;font-weight:700;color:#5A6680;}
+.er-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px dashed #DCE5F6;}
+.er-row div{flex:1;min-width:0;}
+.er-row b{display:block;font-size:16px;color:var(--ink);}
+.er-row small{font-size:13px;color:#5A6680;}
+.er-row button{flex:none;min-height:44px;padding:0 18px;border:0;border-radius:999px;background:var(--blue);color:#fff;font:inherit;font-size:15px;font-weight:900;cursor:pointer;}
+/* 特大字再加強：主要文字實際約 18px 以上 */
+body.large-text .full-desc,body.large-text .short-desc{font-size:15.5px!important;line-height:1.7!important;}
+body.large-text .guide-header h3{font-size:18.5px!important;}
+body.large-text .sub-spot-header h4{font-size:17px!important;}
+body.large-text .info-item .v{font-size:15.5px!important;}
+body.large-text .info-item .k{font-size:13px!important;}
+body.large-text .btn,body.large-text .btn-map,body.large-text .btn-photo{font-size:14.5px!important;min-height:44px;}
+body.large-text .transport-step small,body.large-text .transport-meta,body.large-text .transport-alert{font-size:14px!important;line-height:1.6!important;}
+body.large-text .transport-points strong{font-size:15.5px!important;}
+body.large-text .day-chip .d,body.large-text .day-chip .m{font-size:13px!important;}
+body.large-text .bottom-nav .lb{font-size:15px!important;}
+body.large-text .header-tools .ht-pill{font-size:14px!important;}
+body.large-text .gall-body p{font-size:15.5px!important;}
+body.large-text .gall-hours,body.large-text .gall-actions a,body.large-text .gall-actions button{font-size:14.5px!important;}
+body.large-text .custom-info-box,body.large-text .built-in-info-text,body.large-text .user-info-list,body.large-text .tip-box,body.large-text .park-box{font-size:15px!important;line-height:1.7!important;}
+body.large-text .pack-item .name{font-size:15.5px!important;}
+body.large-text .weather-day .out,body.large-text .dw-metrics2,body.large-text .dp-note,body.large-text .source-note,body.large-text .section-card .sub{font-size:14px!important;line-height:1.65!important;}
+body.large-text .stay-quick-copy strong{font-size:15.5px!important;}
+body.large-text .search-result-copy strong{font-size:15px!important;}
+body.large-text .search-result-copy small{font-size:13px!important;}

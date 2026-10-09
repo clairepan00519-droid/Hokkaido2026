@@ -1638,7 +1638,7 @@ function spotCardHTML(spot, key, isMainSpot, customMeta, orderInfo, fixedMeta){
     </div>` : '';
 
   if (!isMainSpot) {
-    return `<div class="sub-spot-card sub-spot-${spot.cat || 'other'}" id="spot-card-${idx}"><div class="sub-spot-header${coverUrl?' has-thumb':''}" onclick="toggleSpotDetails('${idx}')">${coverUrl?`<div class="gh-thumb sm">${coverImgHTML('guide-cover-img',coverUrl)}</div>`:''}<div class="sub-spot-header-content"><h4>${safeName} ${statusChipHTML(idx)}</h4><p class="short-desc">${safeDesc}</p>${miniStripHTML}</div>${favBtnHTML(idx,"inline")}<div class="chevron">▼</div></div><div class="sub-spot-details-wrap"><div class="sub-spot-details" onclick="event.stopPropagation()">${photoViewerHTML(idx,spot)}${customBar}${editSpotAreaHTML}<p class="full-desc">${safeFullDesc}</p>${marksBoxHTML(idx)}${spot.recDishes ? `<div class="dish-tag">🍲 必點推薦：${escHtml(spot.recDishes)}</div>` : ''}${reorderableBlocksHTML}<div class="action-row" style="margin-top:10px;"><a class="btn btn-map" href="${escAttr(mapsLink(navQuery))}" target="_blank" rel="noopener">導航</a><button class="btn btn-photo edit-only" onclick="event.stopPropagation(); editSpotField(event,'${idx}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字；留空＝用景點名稱）')">修正導航</button>${spot.link ? `<a class="btn btn-photo" href="${escAttr(spot.link)}" target="_blank" rel="noopener">${escHtml(spot.linkLabel)}</a>` : ''}<button class="btn btn-photo" onclick="document.getElementById('file-${idx}').click()">上傳照片</button>${resvButtonsHTML(idx,spot)}${mamaBtnHTML(idx)}</div><input type="file" accept="image/*" id="file-${idx}" style="display:none" multiple onchange="handlePhoto(event, '${idx}')">${subSpotsHTML(idx)}${pStrip}${collapseBtnHTML(idx)}</div></div></div>`;
+    return `<div class="sub-spot-card sub-spot-${spot.cat || 'other'}" id="spot-card-${idx}"><div class="sub-spot-header${coverUrl?' has-thumb':''}" onclick="toggleSpotDetails('${idx}')">${coverUrl?`<div class="gh-thumb sm">${coverImgHTML('guide-cover-img',coverUrl)}</div>`:''}<div class="sub-spot-header-content"><h4>${safeName} ${statusChipHTML(idx)}</h4><p class="short-desc">${safeDesc}</p>${miniStripHTML}</div>${favBtnHTML(idx,"inline")}<div class="chevron">▼</div></div><div class="sub-spot-details-wrap"><div class="sub-spot-details" onclick="event.stopPropagation()">${photoViewerHTML(idx,spot)}${customBar}${editSpotAreaHTML}<p class="full-desc">${safeFullDesc}</p>${marksBoxHTML(idx)}${spot.recDishes ? `<div class="dish-tag">🍲 必點推薦：${escHtml(spot.recDishes)}</div>` : ''}${reorderableBlocksHTML}<div class="action-row" style="margin-top:10px;"><a class="btn btn-map" href="${escAttr(mapsLink(navQuery))}" target="_blank" rel="noopener">導航</a><button class="btn btn-photo edit-only" onclick="event.stopPropagation(); editSpotField(event,'${idx}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字；留空＝用景點名稱）')">修正導航</button>${spot.link ? `<a class="btn btn-photo" href="${escAttr(spot.link)}" target="_blank" rel="noopener">${escHtml(spot.linkLabel)}</a>` : ''}<button class="btn btn-photo" onclick="document.getElementById('file-${idx}').click()">上傳照片</button>${resvButtonsHTML(idx,spot)}${mamaBtnHTML(idx)}${(eatAreaStore[idx]==='none'&&(spot.cat==='food'||spot.cat==='shopping'))?`<button class="btn btn-photo" onclick="event.stopPropagation();restoreEatShopItem('${idx}')">加回${spot.cat==='food'?'吃':'逛'}·北海道</button>`:''}</div><input type="file" accept="image/*" id="file-${idx}" style="display:none" multiple onchange="handlePhoto(event, '${idx}')">${subSpotsHTML(idx)}${pStrip}${collapseBtnHTML(idx)}</div></div></div>`;
   }
 
   return `<div class="guide-card" id="spot-card-${idx}"><div class="guide-header" style="--scrim:${CAT_SCRIM[spot.cat]||'22,34,70'}" onclick="toggleSpotDetails('${idx}')"><div class="gh-thumb"><img class="guide-cover-img" src="${escAttr(bg)}"${photoPosAttr(bg)} alt="" loading="lazy" onerror="imageErrorFallback(this)"><button class="photo-pos-btn edit-only" type="button" data-src="${escAttr(bg)}" onclick="openPhotoPosEditor(event,this)">調整位置</button></div><div class="guide-header-content"><div class="gh-meta"><span class="cat-label ${c.cls}">${c.emoji} ${c.label}</span>${statusChipHTML(idx)}</div><h3>${safeName}</h3><p class="short-desc">${safeDesc}</p></div>${favBtnHTML(idx,"on-cover")}<div class="chevron">▼</div></div><div class="guide-details-wrap"><div class="guide-details" onclick="event.stopPropagation()">${photoViewerHTML(idx,spot)}${customBar}${editSpotAreaHTML}<p class="full-desc">${safeFullDesc}</p>${marksBoxHTML(idx)}${reorderableBlocksHTML}${spot.tip?`<div class="tip-box"><b>📸 拍照與自駕小解密：</b>${escHtml(spot.tip)}</div>`:''}${spot.docMap?`<div class="tip-box" style="background: linear-gradient(120deg,#E8EDF8,#fff); border-color:#D7E1F5; color:#223551;"><b>🗺️ 官方步道地圖與狀態：</b><a href="${escAttr(spot.docMap)}" target="_blank" rel="noopener" style="color:var(--blue); font-weight:700; text-decoration:underline;">點此開啟</a></div>`:''}${spot.park?`<div class="park-box"><b>🅿️ 停車＆自駕補給：</b>${escHtml(spot.park)}</div>`:''}<div class="action-row" style="margin-top:10px;"><a class="btn btn-map" href="${escAttr(mapsLink(navQuery))}" target="_blank" rel="noopener">導航導出</a><button class="btn btn-photo edit-only" onclick="event.stopPropagation(); editSpotField(event,'${idx}','mapQuery','導航位置（Google Maps 網址、地址、經緯度或關鍵字；留空＝用景點名稱）')">修正導航</button>${spot.link ? `<a class="btn btn-photo" href="${escAttr(spot.link)}" target="_blank" rel="noopener">${escHtml(spot.linkLabel)}</a>` : ''}<button class="btn btn-photo" onclick="document.getElementById('file-${idx}').click()">上傳照片</button>${resvButtonsHTML(idx,spot)}${mamaBtnHTML(idx)}</div><input type="file" accept="image/*" id="file-${idx}" style="display:none" multiple onchange="handlePhoto(event, '${idx}')">${subSpotsHTML(idx)}${pStrip}${collapseBtnHTML(idx)}</div></div></div>`;
@@ -3064,7 +3064,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk14-2026-10-06';
+const APP_VERSION='hk15-2026-10-09';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -3546,7 +3546,32 @@ function editEatArea(key){
   const all=collectSpots(()=>true).find(o=>o.key===key);
   const cur=eatAreaStore[key]||(all?(eatAreaFor(all)||'none'):'none');
   openFormModal({title:'調整區域：'+(all?all.name:key),fields:[{id:'area',label:'放在哪個區域',type:'select',value:cur,options:[...allEatAreas().map(a=>({value:a,label:a})),{value:'none',label:'（不列入吃逛北海道）'}]}],
-    onSave:v=>{eatAreaStore[key]=v.area;persistEatArea();safeRenderDayContent();}});
+    onSave:v=>{
+      const had=Object.prototype.hasOwnProperty.call(eatAreaStore,key),prev=eatAreaStore[key];
+      eatAreaStore[key]=v.area;persistEatArea();safeRenderDayContent();
+      if(v.area==='none')offerUndo(`已把「${all?all.name:key}」移出吃逛北海道（可在頁面最下方「已移出的店家」加回）`,()=>{if(had)eatAreaStore[key]=prev;else delete eatAreaStore[key];persistEatArea();safeRenderDayContent();});
+    }});
+}
+/* hk15（移植京丹雅行 v84）：被設成「不列入吃逛北海道」的店家，可以再加回來 */
+function removedEatShop(kind){
+  const cat=kind==='eat'?'food':'shopping';
+  return collectSpots(s=>s.cat===cat).filter(o=>eatAreaStore[o.key]==='none');
+}
+function restoreEatShopItem(key){
+  const o=collectSpots(()=>true).find(x=>x.key===key);if(!o)return;
+  const sp=spotByKey(key);
+  const natural=(sp&&sp.eatArea)||EAT_NAME_AREA[o.name]||EAT_DAY_AREA[o.dayIdx]||null;
+  if(natural){
+    delete eatAreaStore[key];persistEatArea();safeRenderDayContent();
+    offerUndo(`已把「${o.name}」加回 ${natural}`,()=>{eatAreaStore[key]='none';persistEatArea();safeRenderDayContent();});
+  }else{
+    openFormModal({title:'加回吃逛北海道：'+o.name,fields:[{id:'area',label:'放在哪個區域',type:'select',value:allEatAreas()[0],options:allEatAreas().map(a=>({value:a,label:a}))}],saveText:'加回',
+      onSave:v=>{eatAreaStore[key]=v.area;persistEatArea();safeRenderDayContent();showToast(`已把「${o.name}」加回 ${v.area}`);}});
+  }
+}
+function removedEatShopHTML(kind){
+  const list=removedEatShop(kind);if(!list.length)return '';
+  return `<details class="eatshop-removed"><summary>已移出${kind==='eat'?'吃':'逛'}·北海道的店家（${list.length}）<em>點開可加回</em></summary>${list.map(o=>`<div class="er-row"><div><b>${escHtml(o.name)}</b><small>原本在 D${days[o.dayIdx].dayNum}・${days[o.dayIdx].date}</small></div><button type="button" onclick="restoreEatShopItem('${jsQuote(o.key)}')">加回</button></div>`).join('')}</details>`;
 }
 /* (v52 已改寫) */
 /* (v52 已改寫) */
@@ -3707,6 +3732,12 @@ function brText(t){return escHtml(String(t==null?'':t).replace(/<br\s*\/?>/gi,'\
 let eatPlanStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_eat_plan'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
 function persistEatPlan(){safeSetItem('hokkaido_eat_plan',eatPlanStore);}
 function eatCustomSpot(c){return S(c.name,c.kind==='shop'?'shopping':'food',c.note||'',{mapQuery:c.mapQuery||null});}
+/* hk15（移植 v78）：自己新增的吃逛項目，卡片用詳情頁上傳的照片當封面，名稱／簡介以詳情頁修改後的為準 */
+function esCardData(c){
+  const key='es:'+c.id,spot=eatCustomSpot(c);
+  const name=currentFieldValue(key,'name',c.name)||c.name;
+  return {key,name,desc:currentFieldValue(key,'desc',c.note)||c.note,nav:currentFieldValue(key,'mapQuery',null)||c.mapQuery||name,img:spotCoverFor(key,spot)};
+}
 function spotByKey(key){
   let m=String(key).match(/^d(\d+)-([msc])(\d+)$/);
   if(m){const di=Number(m[1]),j=Number(m[3]),d=days[di];if(!d)return null;return m[2]==='m'?d.spots[j]:m[2]==='s'?(d.moreSpots||[])[j]:((x=>x&&!x.deleted?x:null)(getCustomSpots(di)[j]));}
@@ -3782,17 +3813,18 @@ function renderEatShopView(kind){
     const emptyArea=!its.length&&!cus.length;
     if(emptyArea&&!isCustomArea(a))return '';
     const cards=its.map(it=>gallCardHTML({...it,kind,walkFrom:(AREA_ORIGIN[a]||a),areaKey:it.key})).join('')
-      +cus.map(c=>gallCardHTML({key:'es:'+c.id,name:c.name,desc:c.note,nav:c.mapQuery||c.name,kind,walkFrom:(AREA_ORIGIN[a]||a),editId:c.id})).join('');
+      +cus.map(c=>gallCardHTML({...esCardData(c),kind,walkFrom:(AREA_ORIGIN[a]||a),editId:c.id})).join('');
     const qa=jsQuote(a),nAreas=allEatAreas().length;
     const ctl=`<span class="edit-only area-ctl">${gi>0?`<button type="button" onclick="moveEatArea('${qa}',-1)" aria-label="往上移">▲ 上移</button>`:''}${gi<nAreas-1?`<button type="button" onclick="moveEatArea('${qa}',1)" aria-label="往下移">▼ 下移</button>`:''}${isCustomArea(a)?`<button type="button" onclick="renameEatArea('${qa}')">改名</button><button type="button" class="del" onclick="deleteEatArea('${qa}')">刪除</button>`:''}</span>`;
     return `<section class="eatshop-group${emptyArea?' empty-area':''}" id="eatshop-g${gi}"><h3><span>${escHtml(a)}</span><small>${its.length+cus.length} 個</small>${ctl}</h3>${emptyArea?'<div class="dp-empty edit-only">這個區域還沒有項目：按下方「＋ 新增」，或在任一張卡片按「區域」改到這裡。</div>':`<div class="gall-grid">${cards}</div>`}</section>`;
   }).join('');
   const orphan=custom.filter(c=>!used.has(c.id));
-  const orphanHTML=orphan.length?`<section class="eatshop-group"><h3><span>我的收藏（未分區）</span></h3><div class="gall-grid">${orphan.map(c=>gallCardHTML({key:'es:'+c.id,name:c.name,desc:c.note,nav:c.mapQuery||c.name,kind,editId:c.id})).join('')}</div></section>`:'';
+  const orphanHTML=orphan.length?`<section class="eatshop-group"><h3><span>我的收藏（未分區）</span></h3><div class="gall-grid">${orphan.map(c=>gallCardHTML({...esCardData(c),kind,editId:c.id})).join('')}</div></section>`:'';
   const chips=allEatAreas().map((a,gi)=>({a,gi})).filter(({a})=>items.some(it=>it.area===a)||custom.some(c=>c.area===a)).map(({a,gi})=>`<button type="button" onclick="document.getElementById('eatshop-g${gi}')?.scrollIntoView({behavior:'smooth',block:'start'})">${escHtml(a)}</button>`).join('');
   dayContent.innerHTML=`<div class="eatshop-hero"><img class="eh-ic" src="${isEat?NAV_IC.food:NAV_IC.shopping}" alt=""><h2>${word}·北海道</h2></div>
     ${chips?`<div class="eatshop-chips">${chips}</div>`:''}
     ${sections||emptyArtHTML('目前沒有候選項目。')}${orphanHTML}
+    ${removedEatShopHTML(kind)}
     <div class="edit-only eatshop-add"><button type="button" onclick="addEatShop('${kind}')">＋ 新增我的${isEat?'私房餐廳':'逛街地點'}</button><button type="button" onclick="addEatArea()">＋ 新增區域</button></div>
     <div class="end-mama">${mamaBtnHTML('list-'+kind,'wide')}<small>放不進任何店家的資訊，記在這裡</small></div>`;
 }
@@ -3823,7 +3855,7 @@ function closeSpotDetail(){
 /* 每天的「逛吃」分頁：今天已排入 + 已收藏但還沒排入的候選 */
 function dayEatPanelHTML(i){
   const master=[...collectEatShop('eat').map(o=>({...o,kind:'eat'})),...collectEatShop('shop').map(o=>({...o,kind:'shop'}))];
-  const customs=eatShopStore.map(c=>({key:'es:'+c.id,name:c.name,desc:c.note,nav:c.mapQuery||c.name,kind:c.kind,img:'',editId:null}));
+  const customs=eatShopStore.map(c=>({...esCardData(c),kind:c.kind,editId:null}));
   const all=[...master,...customs];
   const planned=all.filter(o=>planOf(o.key)===i);
   const own=collectSpots((s,di,key)=>di===i&&(s.cat==='food'||s.cat==='shopping')&&!isMasterKey(key)&&marksFor(key).fav).map(o=>({...o,kind:o.cat==='shopping'?'shop':'eat'}));
@@ -4036,8 +4068,8 @@ function photoManagerHTML(idx,spot){
   const userCount=list.filter(p=>p.kind==='user').length;
   const tiles=list.map((p,i)=>{
     const isC=p.url===cover,isB=p.url===big;
-    const mv=p.kind==='user'?`<div class="pm-move edit-only">${p.i>0?`<button type="button" onclick="pmAct(event,'${q}',${i},'left')" aria-label="往前">‹</button>`:'<span></span>'}${p.i<userCount-1?`<button type="button" onclick="pmAct(event,'${q}',${i},'right')" aria-label="往後">›</button>`:'<span></span>'}</div>`:'';
-    return `<div class="pm-tile ${isC?'is-cover':''}"><div class="pm-img" data-src="${escAttr(p.url)}" onclick="event.stopPropagation();openAttachModal(this.dataset.src)"><img src="${escAttr(p.url)}"${photoPosAttr(p.url)} alt="" loading="lazy" onerror="imageErrorFallback(this)">${isC?'<span class="pm-b c">封面</span>':''}${isB?'<span class="pm-b b">大圖</span>':''}${p.kind==='orig'?'<span class="pm-b o">原圖</span>':''}${mv}</div><div class="pm-btns edit-only"><button type="button" class="${isC?'on':''}" onclick="pmAct(event,'${q}',${i},'cover')">封面</button><button type="button" class="${isB?'on':''}" onclick="pmAct(event,'${q}',${i},'big')">大圖</button><button type="button" onclick="pmAct(event,'${q}',${i},'pos')">位置</button><button type="button" class="del" onclick="pmAct(event,'${q}',${i},'del')">${p.kind==='orig'?'隱藏':'刪除'}</button></div></div>`;
+    const mv=(p.kind==='user'&&userCount>1)?`<div class="pm-order edit-only">${p.i>0?`<button type="button" onclick="pmAct(event,'${q}',${i},'left')">◀ 往前</button>`:''}${p.i<userCount-1?`<button type="button" onclick="pmAct(event,'${q}',${i},'right')">往後 ▶</button>`:''}</div>`:'';
+    return `<div class="pm-tile ${isC?'is-cover':''}"><div class="pm-img" data-src="${escAttr(p.url)}" onclick="event.stopPropagation();openAttachModal(this.dataset.src)"><img src="${escAttr(p.url)}"${photoPosAttr(p.url)} alt="" loading="lazy" onerror="imageErrorFallback(this)">${isC?'<span class="pm-b c">封面</span>':''}${isB?'<span class="pm-b b">大圖</span>':''}${p.kind==='orig'?'<span class="pm-b o">原圖</span>':''}</div>${mv}<div class="pm-btns edit-only"><button type="button" class="${isC?'on':''}" onclick="pmAct(event,'${q}',${i},'cover')">封面</button><button type="button" class="${isB?'on':''}" onclick="pmAct(event,'${q}',${i},'big')">大圖</button><button type="button" onclick="pmAct(event,'${q}',${i},'pos')">位置</button><button type="button" class="del" onclick="pmAct(event,'${q}',${i},'del')">${p.kind==='orig'?'隱藏':'刪除'}</button></div></div>`;
   }).join('');
   const add=`<button type="button" class="pm-add edit-only" onclick="event.stopPropagation();document.getElementById('file-${escAttr(idx)}').click()">＋ 新增照片</button>`;
   return `<div class="pm" onclick="event.stopPropagation()"><div class="pm-head"><b>照片（${list.length}）</b><span class="pm-hint edit-only">「封面」＝卡片縮圖，「大圖」＝展開後最上方的圖</span>${hidden?`<button type="button" class="pm-restore edit-only" onclick="restoreOrigPhoto(event,'${q}')">還原原圖</button>`:''}</div><div class="pm-grid">${tiles}${add}</div></div>`;
