@@ -2471,3 +2471,14 @@ body.large-text .weather-day .out,body.large-text .dw-metrics2,body.large-text .
 body.large-text .stay-quick-copy strong{font-size:15.5px!important;}
 body.large-text .search-result-copy strong{font-size:15px!important;}
 body.large-text .search-result-copy small{font-size:13px!important;}
+
+/* ===== hk16：展開的卡片不再有高度上限（照片、筆記多時下面不會被切掉） ===== */
+.guide-card.open .guide-details-wrap,.sub-spot-card.open .sub-spot-details-wrap{max-height:none!important;overflow:visible;animation:cardOpen .28s ease-out;}
+@keyframes cardOpen{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+@media (prefers-reduced-motion:reduce){.guide-card.open .guide-details-wrap,.sub-spot-card.open .sub-spot-details-wrap{animation:none;}}
+/* 照片上傳中提示 */
+.upload-progress{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:100001;max-width:calc(100vw - 32px);padding:12px 18px;border-radius:999px;background:#27478C;color:#fff;font-size:15px;font-weight:800;box-shadow:0 10px 26px rgba(20,30,60,.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.upload-progress[hidden]{display:none;}
+/* 新增列：輸入框可以縮，「＋」按鈕不會被擠出畫面 */
+.add-row input,.add-row select,.add-row textarea{min-width:0;}
+.add-row button{flex:none;}
