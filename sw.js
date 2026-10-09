@@ -1,5 +1,5 @@
 /* 北海道冬旅行程：App Shell、圖片與已瀏覽內容離線快取 */
-const CACHE_VERSION='hokkaido-trip-hk14';
+const CACHE_VERSION='hokkaido-trip-hk15';
 const SHELL_CACHE=`hokkaido-shell-${CACHE_VERSION}`;
 const RUNTIME_CACHE=`hokkaido-runtime-${CACHE_VERSION}`;
 /* 圖片快取獨立於版本：更新網站不會清掉已下載的圖片，也不必重新下載 */
