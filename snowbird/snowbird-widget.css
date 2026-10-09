@@ -26,3 +26,5 @@ body.large-text .snowbird-bubble small,body.large-text .snowbird-controls button
 .snowbird-controls{flex-wrap:nowrap}
 .snowbird-controls button{white-space:nowrap;flex:1 1 auto}
 @media(max-width:480px){.snowbird-widget{width:72px}.snowbird-bird{width:72px;height:72px}.snowbird-bubble{bottom:78px}}
+/* hk17：一小段（到標點為止）盡量放在同一行 */
+.snowbird-bubble .sb-ph{display:inline-block;max-width:100%;}
