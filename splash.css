@@ -60,6 +60,6 @@
   .splash__title{opacity:1;transform:none;}
   .flake{display:none;}
 }
-@font-face{font-family:'ChenYuluoyan';src:url('fonts/ChenYuluoyan-Thin.woff2') format('woff2');font-display:swap;}
+@font-face{font-family:'ChenYuluoyan';src:url('fonts/ChenYuluoyan-Thin-sub.woff2') format('woff2');font-display:swap;}
 .splash__title strong{font-weight:400;}
 .splash__title strong{font-family:'ChenYuluoyan','LXGW WenKai TC',serif;font-size:clamp(40px,12vw,60px);}

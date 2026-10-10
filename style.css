@@ -2056,7 +2056,7 @@ h1,h2,h3,h4,.region,.page-title,.day-chip .d,.guide-header-content h3{font-famil
 /* =====================================================================
    hk6｜標題用辰宇落雁體（隨網站附帶）、其餘用霞鶩文楷細體；排版沿用 hk5 的緊湊版
    ===================================================================== */
-@font-face{font-family:'ChenYuluoyan';src:url('fonts/ChenYuluoyan-Thin.woff2') format('woff2');font-display:swap;}
+@font-face{font-family:'ChenYuluoyan';src:url('fonts/ChenYuluoyan-Thin-sub.woff2') format('woff2');font-display:swap;}
 :root{
   --title:'ChenYuluoyan','LXGW WenKai TC',serif;
   --serif:'LXGW WenKai TC','Zen Kaku Gothic New',serif;
@@ -2544,3 +2544,9 @@ details.todo-section>summary.todo-sum::-webkit-details-marker{display:none;}
 .todo-sum i{font-style:normal;color:#8A93A8;transition:transform .2s;}
 details.todo-section[open]>summary.todo-sum i{transform:rotate(180deg);}
 details.todo-section[open]>summary.todo-sum{margin-bottom:8px;}
+
+/* ===== hk21：小按鈕放大到好按（手機至少約 36–40px 高） ===== */
+.btn-note-toggle{min-height:38px;padding-top:6px!important;padding-bottom:6px!important;}
+.dw-tenki2{display:inline-flex!important;align-items:center;min-height:36px;}
+.voucher-status,.voucher-upload{min-height:36px;}
+#globalSearchMobile,#globalSearchDesktop,.search-input input{min-height:40px;}
