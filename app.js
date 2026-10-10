@@ -738,7 +738,7 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('pagehide',()=>{if(cloudSync.enabled&&hasPendingCloudPush()){clearTimeout(cloudSync.timer);flushCloudPush();}});
 window.addEventListener('online',()=>{if(cloudSync.enabled&&hasPendingCloudPush()){cloudSync.retryDelay=0;clearTimeout(cloudSync.timer);cloudSync.timer=setTimeout(flushCloudPush,800);}});
 function updateSyncStatus(err,state){
-  const el=document.getElementById('cloudSyncStatus');if(!el)return;el.style.display='inline-flex';el.classList.toggle('sync-error',!!err);el.classList.toggle('sync-saving',state==='saving'||state==='connecting');
+  const el=document.getElementById('cloudSyncStatus');if(!el)return;el.style.display='inline-flex';document.body.classList.add('has-sync');el.classList.toggle('sync-error',!!err);el.classList.toggle('sync-saving',state==='saving'||state==='connecting');
   if(err){el.textContent='⚠️ '+friendlySyncError(err);el.title=String(err&&err.message||err);el.onclick=()=>{if(confirm('⚠️ 同步遇到問題：\n'+friendlySyncError(err)+'\n\n你的資料都還存在這支手機上，不會遺失。\n要現在重新連線嗎？')){cloudSync.ready=false;cloudSync.enabled=false;startFamilyCloud();}};}
   else if(state==='connecting')el.textContent='☁️ 連線中';else if(state==='saving')el.textContent='☁️ 同步中';else el.textContent='☁️ 已同步';
   if(!err)el.onclick=null;
@@ -3101,7 +3101,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk16-2026-10-09';
+const APP_VERSION='hk18-2026-10-10';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
