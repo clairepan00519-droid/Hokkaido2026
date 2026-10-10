@@ -2532,3 +2532,15 @@ body.has-sync .header .net-status{padding:4px 7px!important;min-width:0;}
 .tp-live-btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;padding:0 10px;border-radius:14px;background:#fff;border:1.5px solid #ABC2EC;color:var(--blue)!important;font-size:14.5px;font-weight:900;text-decoration:none;text-align:center;line-height:1.25;}
 .tp-live-btn.hot{background:var(--blue);border-color:var(--blue);color:#fff!important;}
 body.large-text .tp-live-btn{font-size:15.5px!important;}
+
+/* ===== hk20：出發前待辦可以收合 ===== */
+details.todo-section>summary.todo-sum{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;min-height:48px;}
+details.todo-section>summary.todo-sum::-webkit-details-marker{display:none;}
+.todo-sum-ic{font-size:24px;flex:none;}
+.todo-sum span:nth-child(2){flex:1;min-width:0;}
+.todo-sum b{display:block;font-size:17px;color:var(--blue);}
+.todo-sum small{display:block;margin-top:2px;font-size:13px;color:#4A5570;}
+.todo-sum small.alert{color:#B0412F;font-weight:800;}
+.todo-sum i{font-style:normal;color:#8A93A8;transition:transform .2s;}
+details.todo-section[open]>summary.todo-sum i{transform:rotate(180deg);}
+details.todo-section[open]>summary.todo-sum{margin-bottom:8px;}
