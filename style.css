@@ -2482,3 +2482,10 @@ body.large-text .search-result-copy small{font-size:13px!important;}
 /* 新增列：輸入框可以縮，「＋」按鈕不會被擠出畫面 */
 .add-row input,.add-row select,.add-row textarea{min-width:0;}
 .add-row button{flex:none;}
+
+/* ===== hk18：標頭左上狀態不被擠掉 ===== */
+body.has-sync .header .net-status .net-txt{display:none;}
+body.has-sync .header .net-status{padding:4px 7px!important;min-width:0;}
+.header .cloud-sync-status{max-width:none!important;flex-shrink:0;}
+.header .cloud-sync-status.sync-error{max-width:150px!important;}
+@media (max-width:380px){body.has-sync.large-text .header .net-status{display:none!important;}}
