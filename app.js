@@ -3108,7 +3108,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk22-2026-10-10';
+const APP_VERSION='hk23-2026-10-10';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -4893,14 +4893,14 @@ var reviewStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_revi
 function persistReviews(){safeSetItem('hokkaido_reviews',reviewStore);}
 /* v94：小雪雀心情（圖片 icon）；舊版的 great/good/ok/tired 自動對應 */
 const REVIEW_MOODS=[
-  ['excited','超開心！','開心到跳起來～'],
-  ['content','好滿足～','吃飽飽、心滿滿'],
-  ['touched','好感動','眼眶有點濕濕的'],
-  ['surprised','哇！好驚喜','今天有意外收穫'],
-  ['accomplished','任務達成！','行程全部完成 ✔'],
-  ['tired','走到腿軟…','但是很值得'],
-  ['sleepy','想睡覺 zzz','眼睛快閉起來了'],
-  ['disappointed','有點可惜','明天會更好的！']];
+  ['excited','開心到飛起來！','翅膀拍個不停～'],
+  ['content','吃飽暖呼呼','湯咖哩、海鮮都好好吃'],
+  ['touched','被雪景感動了','雪落下來的時候好安靜'],
+  ['surprised','發現小驚喜！','撿到意外的風景'],
+  ['accomplished','任務完成！','今天的風景都收進相機了'],
+  ['tired','走到腳軟…','雪地好難走，但很值得'],
+  ['sleepy','想窩進被子 zzz','泡完湯眼睛快閉起來了'],
+  ['disappointed','有點可惜','天氣不給力，下次再來！']];
 const OLD_MOOD_MAP={great:'excited',good:'content',ok:'content'};
 function moodInfo(m){m=OLD_MOOD_MAP[m]||m;const x=REVIEW_MOODS.find(z=>z[0]===m);return x?{key:x[0],label:x[1],sub:x[2],img:`images/mood-${x[0]}.webp`}:null;}
 /* v95：心情可複選，存成 "excited,touched"（舊的單一值也相容） */
