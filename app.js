@@ -3108,7 +3108,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk23-2026-10-10';
+const APP_VERSION='hk24-2026-10-10';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -4893,15 +4893,16 @@ var reviewStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_revi
 function persistReviews(){safeSetItem('hokkaido_reviews',reviewStore);}
 /* v94：小雪雀心情（圖片 icon）；舊版的 great/good/ok/tired 自動對應 */
 const REVIEW_MOODS=[
-  ['excited','開心到飛起來！','翅膀拍個不停～'],
-  ['content','吃飽暖呼呼','湯咖哩、海鮮都好好吃'],
-  ['touched','被雪景感動了','雪落下來的時候好安靜'],
-  ['surprised','發現小驚喜！','撿到意外的風景'],
-  ['accomplished','任務完成！','今天的風景都收進相機了'],
-  ['tired','走到腳軟…','雪地好難走，但很值得'],
-  ['sleepy','想窩進被子 zzz','泡完湯眼睛快閉起來了'],
-  ['disappointed','有點可惜','天氣不給力，下次再來！']];
-const OLD_MOOD_MAP={great:'excited',good:'content',ok:'content'};
+  ['happy','開心','今天真開心'],
+  ['excited','興奮','還想再玩一次'],
+  ['relaxed','放鬆','慢慢走也很好'],
+  ['moved','感動','想把這一刻留下'],
+  ['tired','累累','電量剩一格'],
+  ['sleepy','想睡','先讓我睡一下'],
+  ['sad','低落','今天需要抱抱'],
+  ['frustrated','不順心','今天有點卡卡']];
+/* hk24：換成專屬心情雪雀圖；之前選的心情自動對應到最接近的新心情 */
+const OLD_MOOD_MAP={great:'happy',good:'relaxed',ok:'relaxed',content:'relaxed',touched:'moved',surprised:'excited',accomplished:'happy',disappointed:'sad'};
 function moodInfo(m){m=OLD_MOOD_MAP[m]||m;const x=REVIEW_MOODS.find(z=>z[0]===m);return x?{key:x[0],label:x[1],sub:x[2],img:`images/mood-${x[0]}.webp`}:null;}
 /* v95：心情可複選，存成 "excited,touched"（舊的單一值也相容） */
 function moodList(m){const seen=new Set();return String(m||'').split(',').map(x=>OLD_MOOD_MAP[x.trim()]||x.trim()).filter(x=>x&&!seen.has(x)&&seen.add(x)&&REVIEW_MOODS.some(z=>z[0]===x));}
@@ -4913,7 +4914,7 @@ function dayReviewHTML(i){
   const card=([k,r])=>{const ms=moodList(r.mood).map(moodInfo);const mi=ms[0];return `<div class="rv-item${k===me?' mine':''}"><div class="rv-head">${mi?`<img class="rv-deer" src="${mi.img}" alt="${escAttr(mi.label)}" width="56" height="56">`:`<span class="rv-av">${escHtml(String(r.name||'?').slice(0,1).toUpperCase())}</span>`}<div class="rv-who"><b>${escHtml(r.name||'家人')}${k===me?'<em>（我）</em>':''}</b></div></div>${ms.length?`<div class="rv-moods">${ms.map((x,n)=>`<span class="rv-mood">${n?`<img src="${x.img}" alt="" width="26" height="26">`:''}${escHtml(x.label)}</span>`).join('')}</div>`:''}${r.text?`<p>${brText(r.text)}</p>`:''}${r.img?`<img class="rv-img" src="${escAttr(r.img)}" data-src="${escAttr(r.img)}" alt="" loading="lazy" onclick="openAttachModal(this.dataset.src)">`:''}${k===me?`<div class="rv-acts"><button type="button" onclick="editMyReview(${i})">修改</button><button type="button" class="rv-del" onclick="deleteMyReview(${i})">刪除</button></div>`:''}</div>`;};
   const mine=day[me]&&(day[me].text||day[me].img||day[me].mood);
   const email=myEmail();
-  return `<section class="day-review"><h3><img src="images/mood-content.webp" alt="" width="40" height="40">今日回顧</h3><p class="rv-sub">今天過得怎麼樣呀？選幾隻小雪雀代表你的心情，再說說今天最喜歡的瞬間～全家都看得到喔 ❄️</p>${entries.map(card).join('')||'<div class="rv-empty">還沒有人寫喔～<br>睡前來跟小雪雀說說今天吧！</div>'}${mine?'':`<button type="button" class="rv-add" onclick="editMyReview(${i})">＋ 寫我的回顧</button>`}${CLOUD_CONFIGURED?'':'<!--'}<p class="rv-acct">${email?`目前用 <b>${escHtml(email)}</b> 寫`:'目前沒有登入'}・<button type="button" class="rv-switch" onclick="logoutFamily()">不是你？換帳號</button></p>${CLOUD_CONFIGURED?'':'-->'}</section>`;
+  return `<section class="day-review"><h3><img src="images/mood-happy.webp" alt="" width="40" height="40">今日回顧</h3><p class="rv-sub">今天過得怎麼樣呀？選幾隻小雪雀代表你的心情，再說說今天最喜歡的瞬間～全家都看得到喔 ❄️</p>${entries.map(card).join('')||'<div class="rv-empty">還沒有人寫喔～<br>睡前來跟小雪雀說說今天吧！</div>'}${mine?'':`<button type="button" class="rv-add" onclick="editMyReview(${i})">＋ 寫我的回顧</button>`}${CLOUD_CONFIGURED?'':'<!--'}<p class="rv-acct">${email?`目前用 <b>${escHtml(email)}</b> 寫`:'目前沒有登入'}・<button type="button" class="rv-switch" onclick="logoutFamily()">不是你？換帳號</button></p>${CLOUD_CONFIGURED?'':'-->'}</section>`;
 }
 function moodPickerHTML(cur){
   const sel=moodList(cur);
