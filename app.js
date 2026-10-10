@@ -3105,7 +3105,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk19-2026-10-10';
+const APP_VERSION='hk20-2026-10-10';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -4835,6 +4835,11 @@ function renderTodos(){
       ${done.length?`<details class="td-done"><summary>已完成（${done.length}）</summary>${done.map(row).join('')}</details>`:''}
       <button type="button" class="td-add" onclick="addTodo()">＋ 新增待辦</button>`;
   }
+  /* 收合時標題下仍顯示進度 */
+  const sec=document.getElementById('todoSection');
+  if(sec&&!sec.dataset.init){sec.dataset.init='1';let o=null;try{o=localStorage.getItem('hokkaido_todo_open');}catch(e){}sec.open=o==='1';}
+  const sum=document.getElementById('todoSumLine');
+  if(sum){const soon=todoData.filter(t=>!t.done&&(n=>n!=null&&n<=3)(todoDaysLeft(t.due))).length;sum.textContent=left?`還有 ${left} 項／共 ${total} 項${soon?`・${soon} 項快到期`:''}`:`全部完成 🎉（${total} 項）`;sum.classList.toggle('alert',!!soon);}
   renderTodoBanner();
 }
 function toggleTodo(id,checked){
@@ -4874,7 +4879,7 @@ function renderTodoBanner(){
   if(!el){el=document.createElement('button');el.type='button';el.id='todoBanner';el.className='todo-banner';el.onclick=goToTodos;host.prepend(el);}
   el.innerHTML=`<span class="tb-ic">✅</span><span class="tb-txt"><b>出發前待辦還有 ${left.length} 項</b>${late?`<small>${late} 項快到期或已過期</small>`:'<small>點這裡查看、勾選</small>'}</span><em>›</em>`;
 }
-function goToTodos(){setTab('guide');setTimeout(()=>document.getElementById('todoSection')?.scrollIntoView({behavior:'smooth',block:'start'}),80);}
+function goToTodos(){const sec=document.getElementById('todoSection');if(sec)sec.open=true;setTab('guide');setTimeout(()=>document.getElementById('todoSection')?.scrollIntoView({behavior:'smooth',block:'start'}),80);}
 
 /* ---- 初次渲染 ---- */
 renderDayChips();

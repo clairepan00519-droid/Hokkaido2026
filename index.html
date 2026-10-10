@@ -32,7 +32,7 @@ window.addEventListener('load',function(){setTimeout(function(){if(window.__appR
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@300;400;700&family=Caveat:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="preload" href="fonts/ChenYuluoyan-Thin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="style.css?v=hk19">
+<link rel="stylesheet" href="style.css?v=hk20">
 <link rel="stylesheet" href="splash.css?v=hk13">
 <link rel="stylesheet" href="snowbird/snowbird-widget.css?v=hk17">
 </head>
@@ -201,11 +201,11 @@ window.addEventListener('load',function(){setTimeout(function(){if(window.__appR
   <!-- ================= GUIDE VIEW ================= -->
   <div class="view" id="view-guide">
 
-    <div class="section-card todo-section" id="todoSection">
-      <h3>✅ 出發前待辦</h3>
+    <details class="section-card todo-section" id="todoSection" ontoggle="try{localStorage.setItem('hokkaido_todo_open',this.open?'1':'0')}catch(e){}">
+      <summary class="todo-sum"><span class="todo-sum-ic">✅</span><span><b>出發前待辦</b><small id="todoSumLine">全家共用的準備清單</small></span><i aria-hidden="true">▾</i></summary>
       <div class="sub">全家共用：誰勾了完成，大家都看得到。可以自己新增、修改日期與備註（預約編號、網址等）。</div>
       <div id="todoListWrap"></div>
-    </div>
+    </details>
 
     <div class="section-card">
       <h3><img class="h-ic" src="images/nav-guide.webp" alt="" width="28" height="28"> 行李打包清單<img class="h-art" src="images/bird-suitcase.webp" alt="" width="58" height="47"></h3>
@@ -357,7 +357,7 @@ window.addEventListener('load',function(){setTimeout(function(){if(window.__appR
 <script src="config.js?v=hk12"></script>
 <script src="snowbird/snowbird-content.js?v=hk9"></script>
 <script src="snowbird/snowbird-widget.js?v=hk17"></script>
-<script src="app.js?v=hk19"></script>
+<script src="app.js?v=hk20"></script>
 
 
 
