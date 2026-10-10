@@ -3108,7 +3108,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk24-2026-10-10';
+const APP_VERSION='hk25-2026-10-10';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -4897,12 +4897,16 @@ const REVIEW_MOODS=[
   ['excited','興奮','還想再玩一次'],
   ['relaxed','放鬆','慢慢走也很好'],
   ['moved','感動','想把這一刻留下'],
+  ['content','吃飽暖呼呼','湯咖哩、海鮮都好好吃'],
+  ['touched','被雪景感動了','雪落下來的時候好安靜'],
+  ['surprised','發現小驚喜！','撿到意外的風景'],
+  ['accomplished','任務完成！','今天的風景都收進相機了'],
   ['tired','累累','電量剩一格'],
   ['sleepy','想睡','先讓我睡一下'],
   ['sad','低落','今天需要抱抱'],
   ['frustrated','不順心','今天有點卡卡']];
-/* hk24：換成專屬心情雪雀圖；之前選的心情自動對應到最接近的新心情 */
-const OLD_MOOD_MAP={great:'happy',good:'relaxed',ok:'relaxed',content:'relaxed',touched:'moved',surprised:'excited',accomplished:'happy',disappointed:'sad'};
+/* hk25：12 種心情（專屬心情雪雀 8 種＋旅途 4 種）；更早期的心情代碼自動對應 */
+const OLD_MOOD_MAP={great:'happy',good:'relaxed',ok:'relaxed',disappointed:'sad'};
 function moodInfo(m){m=OLD_MOOD_MAP[m]||m;const x=REVIEW_MOODS.find(z=>z[0]===m);return x?{key:x[0],label:x[1],sub:x[2],img:`images/mood-${x[0]}.webp`}:null;}
 /* v95：心情可複選，存成 "excited,touched"（舊的單一值也相容） */
 function moodList(m){const seen=new Set();return String(m||'').split(',').map(x=>OLD_MOOD_MAP[x.trim()]||x.trim()).filter(x=>x&&!seen.has(x)&&seen.add(x)&&REVIEW_MOODS.some(z=>z[0]===x));}
