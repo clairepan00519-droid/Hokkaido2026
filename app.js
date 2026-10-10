@@ -235,9 +235,9 @@ const SUPABASE_ANON_KEY = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_ANON_KEY||"").t
 const CLOUD_CONFIGURED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 const SYNC_META_KEY = 'hokkaido_sync_meta_v3';
-const SYNC_KEYS = ['hokkaido_notes','hokkaido_info_overrides','hokkaido_field_overrides','hokkaido_photos','hokkaido_covers','hokkaido_custom_spots','hokkaido_order','hokkaido_block_order','hokkaido_route_maps','hokkaido_transport_extras','hokkaido_foliage_maps','hokkaido_pack','hokkaido_shop','hokkaido_rules','hokkaido_docs','hokkaido_hidden_fixed_spots','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_photo_pos','hokkaido_marks','hokkaido_livelinks','hokkaido_mama','hokkaido_surprises','hokkaido_tips_seen','hokkaido_eat_area','hokkaido_eat_plan','hokkaido_detail_covers','hokkaido_hidden_orig','hokkaido_transport_custom','hokkaido_eat_area_custom','hokkaido_sub_spots','hokkaido_spot_day','hokkaido_eat_area_order'];
+const SYNC_KEYS = ['hokkaido_notes','hokkaido_info_overrides','hokkaido_field_overrides','hokkaido_photos','hokkaido_covers','hokkaido_custom_spots','hokkaido_order','hokkaido_block_order','hokkaido_route_maps','hokkaido_transport_extras','hokkaido_foliage_maps','hokkaido_pack','hokkaido_shop','hokkaido_rules','hokkaido_docs','hokkaido_hidden_fixed_spots','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_photo_pos','hokkaido_marks','hokkaido_livelinks','hokkaido_mama','hokkaido_surprises','hokkaido_tips_seen','hokkaido_eat_area','hokkaido_eat_plan','hokkaido_detail_covers','hokkaido_hidden_orig','hokkaido_transport_custom','hokkaido_eat_area_custom','hokkaido_sub_spots','hokkaido_spot_day','hokkaido_eat_area_order','hokkaido_todos'];
 const MEDIA_SYNC_KEYS = new Set(['hokkaido_photos','hokkaido_covers','hokkaido_route_maps','hokkaido_transport_extras','hokkaido_foliage_maps']);
-const STRUCTURED_LIST_KEYS = new Set(['hokkaido_shop','hokkaido_rules','hokkaido_docs','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_livelinks','hokkaido_surprises']);
+const STRUCTURED_LIST_KEYS = new Set(['hokkaido_shop','hokkaido_rules','hokkaido_todos','hokkaido_docs','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_livelinks','hokkaido_surprises']);
 const cloudSync = {enabled:false, starting:false, applyingRemote:false, pending:{}, timer:null, pollTimer:null, lastError:null, ready:false};
 const MEDIA_BUCKET = 'trip-media';
 
@@ -676,7 +676,7 @@ function flushPendingDayRender(){
 }
 function applyStoreUpdate(key,jsonStr){
   let parsed;try{parsed=JSON.parse(jsonStr);}catch(e){return;}
-  switch(key){case'hokkaido_notes':notesStore=parsed;break;case'hokkaido_info_overrides':infoOverrideStore=parsed||{};break;case'hokkaido_field_overrides':fieldOverrideStore=parsed||{};break;case'hokkaido_photos':photoStore=parsed;break;case'hokkaido_covers':coverStore=parsed;break;case'hokkaido_custom_spots':customSpotsStore=parsed;break;case'hokkaido_order':orderStore=parsed;break;case'hokkaido_block_order':blockOrderStore=parsed;break;case'hokkaido_route_maps':routeMapStore=parsed;break;case'hokkaido_transport_extras':transportExtrasStore=parsed||{};break;case'hokkaido_foliage_maps':foliageMapStore=Array.isArray(parsed)?parsed:[];renderFoliageMaps();return;case'hokkaido_pack':packData=migratePackCategoryNames(parsed);window._packLive=packData;if(isPackComposerEditing()){window._packRemoteRenderPending=true;}else{renderPackList();}return;case'hokkaido_shop':shopData=normalizeStructuredList('hokkaido_shop',parsed);renderShopList();return;case'hokkaido_rules':rulesData=normalizeStructuredList('hokkaido_rules',parsed);renderRulesList();return;case'hokkaido_docs':docsData=mergeDocsWithDefaults(parsed);persistDocs();renderDocsList();return;case'hokkaido_transport_cards':transportCardsData=normalizeStructuredList('hokkaido_transport_cards',parsed);renderTransportCards();return;case'hokkaido_eatshop':eatShopStore=normalizeStructuredList('hokkaido_eatshop',parsed);if(typeof activeDay==='string')renderDayContent();return;case'hokkaido_photo_pos':photoPosStore=parsed||{};safeRenderDayContent();return;case'hokkaido_marks':marksStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderMarksBar();safeRenderDayContent();return;case'hokkaido_livelinks':liveData=normalizeStructuredList('hokkaido_livelinks',parsed);renderLive();return;case'hokkaido_surprises':surprisesData=normalizeStructuredList('hokkaido_surprises',parsed);renderSurpriseAdmin();return;case'hokkaido_tips_seen':tipsSeen=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};return;case'hokkaido_transport_custom':transportCustomStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_detail_covers':detailCoverStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_hidden_orig':hiddenOrigStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_plan':eatPlanStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area':eatAreaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};if(typeof activeDay==='string')safeRenderDayContent();return;case'hokkaido_mama':mamaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};refreshMamaButtons(null);if(document.getElementById('mamaModal'))renderMamaList();return;case'hokkaido_hidden_fixed_spots':hiddenFixedSpotsStore=parsed||{};safeRenderDayContent();if(typeof updateSpotCount==='function')updateSpotCount();return;case'hokkaido_sub_spots':subSpotStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area_custom':eatAreaCustom=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;case'hokkaido_spot_day':spotDayStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderDayChips();safeRenderDayContent();return;case'hokkaido_eat_area_order':eatAreaOrder=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;default:return;}
+  switch(key){case'hokkaido_notes':notesStore=parsed;break;case'hokkaido_info_overrides':infoOverrideStore=parsed||{};break;case'hokkaido_field_overrides':fieldOverrideStore=parsed||{};break;case'hokkaido_photos':photoStore=parsed;break;case'hokkaido_covers':coverStore=parsed;break;case'hokkaido_custom_spots':customSpotsStore=parsed;break;case'hokkaido_order':orderStore=parsed;break;case'hokkaido_block_order':blockOrderStore=parsed;break;case'hokkaido_route_maps':routeMapStore=parsed;break;case'hokkaido_transport_extras':transportExtrasStore=parsed||{};break;case'hokkaido_foliage_maps':foliageMapStore=Array.isArray(parsed)?parsed:[];renderFoliageMaps();return;case'hokkaido_pack':packData=migratePackCategoryNames(parsed);window._packLive=packData;if(isPackComposerEditing()){window._packRemoteRenderPending=true;}else{renderPackList();}return;case'hokkaido_shop':shopData=normalizeStructuredList('hokkaido_shop',parsed);renderShopList();return;case'hokkaido_rules':rulesData=normalizeStructuredList('hokkaido_rules',parsed);renderRulesList();return;case'hokkaido_docs':docsData=mergeDocsWithDefaults(parsed);persistDocs();renderDocsList();return;case'hokkaido_transport_cards':transportCardsData=normalizeStructuredList('hokkaido_transport_cards',parsed);renderTransportCards();return;case'hokkaido_eatshop':eatShopStore=normalizeStructuredList('hokkaido_eatshop',parsed);if(typeof activeDay==='string')renderDayContent();return;case'hokkaido_photo_pos':photoPosStore=parsed||{};safeRenderDayContent();return;case'hokkaido_marks':marksStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderMarksBar();safeRenderDayContent();return;case'hokkaido_livelinks':liveData=normalizeStructuredList('hokkaido_livelinks',parsed);renderLive();return;case'hokkaido_surprises':surprisesData=normalizeStructuredList('hokkaido_surprises',parsed);renderSurpriseAdmin();return;case'hokkaido_tips_seen':tipsSeen=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};return;case'hokkaido_transport_custom':transportCustomStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_detail_covers':detailCoverStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_hidden_orig':hiddenOrigStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_plan':eatPlanStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area':eatAreaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};if(typeof activeDay==='string')safeRenderDayContent();return;case'hokkaido_mama':mamaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};refreshMamaButtons(null);if(document.getElementById('mamaModal'))renderMamaList();return;case'hokkaido_hidden_fixed_spots':hiddenFixedSpotsStore=parsed||{};safeRenderDayContent();if(typeof updateSpotCount==='function')updateSpotCount();return;case'hokkaido_sub_spots':subSpotStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area_custom':eatAreaCustom=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;case'hokkaido_spot_day':spotDayStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderDayChips();safeRenderDayContent();return;case'hokkaido_todos':todoData=normalizeStructuredList('hokkaido_todos',parsed);renderTodos();return;case'hokkaido_eat_area_order':eatAreaOrder=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;default:return;}
   safeRenderDayContent();if(typeof updateSpotCount==='function')updateSpotCount();
 }
 function scheduleCloudPush(key,valueObj){
@@ -872,6 +872,9 @@ const SAPPORO_EATS=[
   ['MÓNT・JÉLI. CAKE SHOP','蛋糕店。','札幌其他',['甜點']]
 ];
 days[2].moreSpots.push(...SAPPORO_EATS.map(([n,d,area,tags])=>S(n,'food',d,{tags,pool:true,eatArea:area,fullDesc:'細節待補，可在編輯模式補上營業時間與導航位置。'})));
+/* hk19：冬季祭典（加在各天景點最後面，原本景點的編號不變，筆記照片不會錯位）。2027 年日期待官方公布。 */
+days[2].spots.push(S("さっぽろ雪まつり（札幌雪祭）大通會場","attraction","大通公園一整排大型雪像，入夜點燈；通常在 2 月上旬舉辦約一週。",{tags:["祭典","夜間點燈","日期待公布"],dur:"約1–2小時",fullDesc:"札幌雪祭通常在 2 月上旬舉辦約一週，大通會場有大型雪像與雪雕，晚上點燈最漂亮；薄野會場是冰雕。2027 年的日期請以官方公布為準：如果 2/6 有舉辦，晚餐後從札幌站搭地下鐵或步行到大通即可；2/9、2/13 晚上也住札幌，可以再去。會場人多、地面結冰，穿防滑鞋。",mapQuery:"大通公園",link:"https://www.snowfes.com/",linkLabel:"雪祭官網",img:SCENE.doucho}));
+days[7].spots.push(S("小樽雪あかりの路（雪燈之路）","attraction","運河與手宮線舊鐵道沿線點滿雪燈籠與蠟燭，通常在 2 月上中旬舉辦。",{tags:["祭典","夜間點燈","日期待公布"],dur:"約1小時",fullDesc:"小樽冬季的燭光活動，小樽運河與手宮線舊鐵道沿線擺滿雪燈籠，傍晚點燈後非常安靜美麗。通常在 2 月上旬到中旬舉辦，2027 年日期請以官方公布為準；如果有舉辦，2/11、2/12 晚餐後從 OMO5 散步過去即可。運河邊路面容易結冰。",mapQuery:"小樽運河",link:"https://yukiakarinomichi.org/",linkLabel:"雪燈之路官網",img:SCENE.cheesecake}));
 
 /* 每日交通速查（有時間的段落先填入，其餘可在「🚉 交通」自行新增） */
 const transportPlans = [
@@ -1448,10 +1451,10 @@ let activeSubTabStore = {}; /* dayIdx -> 'main' | 'transport' | 'more' | 'routem
 
 function transportPlanHTML(dayIdx){
   const plan=transportPlans[dayIdx];
-  if(!plan)return `<section class="transport-plan"><div class="tp-head"><div><small>D${days[dayIdx].dayNum}・${days[dayIdx].date}</small><strong>今日交通</strong></div><img src="images/art-route.webp" alt="" width="56" height="56"></div>${customTransportHTML(dayIdx)}${transportAddBarHTML(dayIdx)}</section>`;
+  if(!plan)return `<section class="transport-plan"><div class="tp-head"><div><small>D${days[dayIdx].dayNum}・${days[dayIdx].date}</small><strong>今日交通</strong></div><img src="images/art-route.webp" alt="" width="56" height="56"></div>${tpLiveBarHTML(dayIdx)}${customTransportHTML(dayIdx)}${transportAddBarHTML(dayIdx)}</section>`;
   const routes=(rows,prefix='route')=>`<div class="transport-steps">${(rows||[]).map((r0,i)=>{const segmentKey=`${prefix}-${i}`;const sk=`tp${dayIdx}-${segmentKey}`;if(currentFieldValue(sk,'hidden',null)==='1')return '';const r={from:currentFieldValue(sk,'from',r0.from)||r0.from,to:currentFieldValue(sk,'to',r0.to)||r0.to,mode:currentFieldValue(sk,'mode',r0.mode)||r0.mode,time:currentFieldValue(sk,'time',r0.time)||r0.time,note:currentFieldValue(sk,'note',r0.note)||r0.note};window._tpOrig=window._tpOrig||{};window._tpOrig[sk]=r0;return `<div class="transport-step"><span class="transport-step-no">${i+1}</span><div class="transport-step-main"><div class="transport-points"><strong>${escHtml(r.from)}</strong><span>→</span><strong>${escHtml(r.to)}</strong></div><div class="transport-meta"><b>${escHtml(r.mode)}</b><span>⏱ ${escHtml(r.time)}</span></div><small>${escHtml(r.note)}</small>${tpGoButtonsHTML(dayIdx,r,i===(rows||[]).length-1)}<div class="edit-only tp-step-actions"><button type="button" onclick="editTransportStep('${sk}')">✎ 修改</button><button type="button" onclick="deleteTransportStep('${sk}')">🗑 刪除</button></div>${transportSegmentExtrasHTML(dayIdx,segmentKey)}</div></div>`;}).join('')}</div>`;
   const body=plan.choices?`<div class="transport-choice-list">${plan.choices.map((choice,i)=>`<details class="transport-choice"${i===0?' open':''}><summary>${escHtml(choice.name)}<span>展開路線</span></summary>${routes(choice.routes,`choice-${i}`)}</details>`).join('')}</div>`:plan.drive?`<div class="transport-drive-card"><span>🚗</span><div><strong>今天全程自駕</strong><small>按下方按鈕開啟當日主要地點導航；停車、休息站與道路狀況以當日為準。</small>${transportSegmentExtrasHTML(dayIdx,'drive-0')}</div></div>`:routes(plan.routes);
-  return `<section class="transport-plan"><div class="tp-head"><div><small>D${days[dayIdx].dayNum}・${days[dayIdx].date}</small><strong>今日交通</strong></div><img src="images/art-route.webp" alt="" width="56" height="56"></div><div class="transport-alert">⚠️ ${escHtml(plan.alert)}</div>${body}${customTransportHTML(dayIdx)}${legacyTransportExtrasHTML(dayIdx)}${transportAddBarHTML(dayIdx)}<div class="transport-actions"><a href="https://www.google.com/maps/dir/?api=1&travelmode=${plan.drive?'driving':'transit'}&destination=${encodeURIComponent(currentFieldValue('day'+dayIdx+'-nav','mapQuery',null)||(days[dayIdx].region+' Japan'))}" target="_blank" rel="noopener">📍 開啟今日導航</a><button type="button" class="edit-only tp-nav-fix" onclick="editSpotField(event,'day${dayIdx}-nav','mapQuery','今日導航目的地（地址、經緯度或關鍵字）')">修正導航</button><button type="button" class="edit-only tp-nav-fix" onclick="restoreTransportSteps(${dayIdx})">↺ 還原本日交通步驟</button></div></section>`;
+  return `<section class="transport-plan"><div class="tp-head"><div><small>D${days[dayIdx].dayNum}・${days[dayIdx].date}</small><strong>今日交通</strong></div><img src="images/art-route.webp" alt="" width="56" height="56"></div>${tpLiveBarHTML(dayIdx)}<div class="transport-alert">⚠️ ${escHtml(plan.alert)}</div>${body}${customTransportHTML(dayIdx)}${legacyTransportExtrasHTML(dayIdx)}${transportAddBarHTML(dayIdx)}<div class="transport-actions"><a href="https://www.google.com/maps/dir/?api=1&travelmode=${plan.drive?'driving':'transit'}&destination=${encodeURIComponent(currentFieldValue('day'+dayIdx+'-nav','mapQuery',null)||(days[dayIdx].region+' Japan'))}" target="_blank" rel="noopener">📍 開啟今日導航</a><button type="button" class="edit-only tp-nav-fix" onclick="editSpotField(event,'day${dayIdx}-nav','mapQuery','今日導航目的地（地址、經緯度或關鍵字）')">修正導航</button><button type="button" class="edit-only tp-nav-fix" onclick="restoreTransportSteps(${dayIdx})">↺ 還原本日交通步驟</button></div></section>`;
 }
 
 function setActiveDay(i) {
@@ -2672,6 +2675,7 @@ function openFormModal({title,fields,onSave,onDelete,saveText='儲存'}){
     let input;
     if(f.type==='textarea') input=`<textarea data-f="${f.id}" rows="${f.rows||3}" placeholder="${escAttr(f.placeholder||'')}">${escHtml(f.value||'')}</textarea>`;
     else if(f.type==='file') input=`<input type="file" data-f="${f.id}" accept="image/*">`;
+    else if(f.type==='date') input=`<input type="date" data-f="${f.id}" value="${escAttr(f.value||'')}">`;
     else if(f.type==='files') input=`<input type="file" data-f="${f.id}" data-multi="1" accept="image/*" multiple>`;
     else if(f.type==='select') input=`<select data-f="${f.id}">${f.options.map(o=>`<option value="${escAttr(o.value)}" ${o.value===f.value?'selected':''}>${escHtml(o.label)}</option>`).join('')}</select>`;
     else input=`<input type="text" data-f="${f.id}" value="${escAttr(f.value||'')}" placeholder="${escAttr(f.placeholder||'')}">`;
@@ -3101,7 +3105,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk18-2026-10-10';
+const APP_VERSION='hk19-2026-10-10';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -3323,6 +3327,17 @@ document.addEventListener('DOMContentLoaded',()=>{initLive();renderMarksBar();re
    ===================================================================== */
 const DAY_CITIES=[['Chitose'],['Chitose'],['Chitose','Sapporo'],['Sapporo','Toya'],['Toya'],['Toya','Sapporo'],['Sapporo','Otaru'],['Otaru'],['Otaru'],['Otaru','Sapporo'],['Sapporo','Chitose']];
 const NAV_IC={itinerary:'images/nav-itinerary.webp',route:'images/nav-route.webp',guide:'images/nav-guide.webp',weather:'images/nav-weather.webp',food:'images/nav-food.webp',shopping:'images/nav-shopping.webp',lodging:'images/nav-lodging.webp'};
+/* hk19：每天「交通」分頁最上方的即時狀況大按鈕（網址沿用環線頁「即時交通與警報」，在那裡改了這裡也跟著變） */
+function tpLiveBarHTML(dayIdx){
+  const by=id=>(typeof liveData!=='undefined'&&Array.isArray(liveData)?liveData.find(x=>x.id===id&&x.url):null)||(typeof LIVE_SEED!=='undefined'?LIVE_SEED.find(x=>x.id===id):null);
+  const plan=transportPlans[dayIdx];
+  const rows=plan?[...(plan.routes||[]),...(plan.choices||[]).flatMap(c=>c.routes||[])]:[];
+  const flight=rows.some(r=>/✈️|航空/.test(r.mode||''));
+  const items=[['lv-jr','🚆','JR 運行情報'],['lv-cts','✈️','新千歲機場'],['lv-road','🛣️','道路・巴士路況'],['lv-jma','⚠️','大雪警報']];
+  if(flight)items.unshift(items.splice(1,1)[0]);
+  const btns=items.map(([id,ic,label])=>{const x=by(id);return x&&x.url?`<a class="tp-live-btn${flight&&id==='lv-cts'?' hot':''}" href="${escAttr(x.url)}" target="_blank" rel="noopener"><span>${ic}</span>${escHtml(label)}</a>`:'';}).join('');
+  return btns?`<div class="tp-live"><small>大雪天出門前先看：</small><div class="tp-live-grid">${btns}</div></div>`:'';
+}
 function icImg(name,cls='ic-img'){return `<img class="${cls}" src="${NAV_IC[name]}" alt="" width="28" height="28" decoding="async">`;}
 
 /* ---------- 標頭控制 ---------- */
@@ -4765,11 +4780,108 @@ function openSpotDayModal(key){
     }});
 }
 
+/* ============ hk19（移植京丹雅行 v85）：出發前待辦（全家共用，誰勾的會顯示名字） ============ */
+const TODO_SEED=[
+  {id:'todo-vjw',text:'每個人填好 Visit Japan Web（入境與海關資料），截圖 QR Code',due:'2027-01-28'},
+  {id:'todo-insurance',text:'保旅遊平安險＋旅遊不便險（大雪航班延誤、行李延誤）',due:'2027-01-21'},
+  {id:'todo-gear',text:'雪地裝備：防滑雪靴或冰爪、發熱衣、手套、毛帽、圍巾、暖暖包',due:'2027-01-21'},
+  {id:'todo-mizu',text:'水之謌：確認 2/4 新千歲機場 16:30 前往飯店的交通／接駁預約',due:'2027-01-21'},
+  {id:'todo-toya',text:'湖の栖：確認 2/7 札幌出發的飯店接駁（要不要預約、上車地點與時間）',due:'2027-01-21'},
+  {id:'todo-shun',text:'山鄉春 Villa：約好 2/10 錢函站接駁、2/11 送到錢函站的時間',due:'2027-01-21'},
+  {id:'todo-hokuto',text:'如果 2/7 改搭 JR 特急北斗：先劃位',due:'2027-01-28'},
+  {id:'todo-dinner',text:'晚餐訂位：吃·北海道裡標「預約」的店',due:'2027-01-21'},
+  {id:'todo-festival',text:'查 2027 札幌雪祭、小樽雪あかりの路的日期與點燈時間，填到行程',due:'2027-01-15'},
+  {id:'todo-ice',text:'確認支笏湖冰濤祭點燈時間、洞爺湖溫泉花火有沒有舉行',due:'2027-01-21'},
+  {id:'todo-ic',text:'準備 Kitaca／Suica（手機或實體卡），先儲值',due:'2027-01-28'},
+  {id:'todo-sim',text:'買網卡／eSIM，或開通漫遊',due:'2027-01-28'},
+  {id:'todo-yen',text:'換日幣（小額現金：市場、巴士、小店）',due:'2027-01-28'},
+  {id:'todo-taxi',text:'手機下載 GO 叫車 App，綁好信用卡（雪天叫車方便）',due:'2027-01-28'},
+  {id:'todo-hotel',text:'確認每間飯店的入住時間、行李寄放與早晚餐',due:'2027-01-28'},
+  {id:'todo-check-snow',text:'出發前一週看雪況與 JR 運行，決定 2/7 走接駁還是 JR',due:'2027-01-31'},
+  {id:'todo-login',text:'每位家人都用自己的手機登入這個網站一次，並在 ⚙️ 下載離線圖片',due:'2027-02-01'},
+  {id:'todo-flight',text:'CI130 線上報到（2/4 08:35 桃園出發）',due:'2027-02-03'}
+].map(t=>({...t,done:false,note:''}));
+let todoData=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_todos'));return Array.isArray(v)?normalizeStructuredList('hokkaido_todos',v):structuredClone(TODO_SEED);}catch(e){return structuredClone(TODO_SEED);}})();
+function persistTodos(){safeSetItem('hokkaido_todos',todoData);}
+function todoWho(){
+  try{const e=(familyAuthSession&&familyAuthSession.email)||(readAuthSession()&&readAuthSession().email)||'';return e?e.split('@')[0]:'';}catch(e){return '';}
+}
+function todoDaysLeft(due){
+  if(!due)return null;const m=String(due).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return null;
+  const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]));const t=new Date();t.setHours(0,0,0,0);
+  return Math.round((d-t)/86400000);
+}
+function todoDueHTML(due,done){
+  const n=todoDaysLeft(due);if(n==null)return '';
+  const m=due.slice(5).replace('-','/').replace(/^0/,'');
+  if(done)return `<span class="td-due">${m}</span>`;
+  const cls=n<0?'late':n<=3?'soon':'';
+  const txt=n<0?`${m}・已過 ${-n} 天`:n===0?`${m}・今天`:`${m}・還有 ${n} 天`;
+  return `<span class="td-due ${cls}">${txt}</span>`;
+}
+function todoSorted(){
+  const key=t=>t.due||'9999-99-99';
+  return todoData.map((t,i)=>({t,i})).sort((a,b)=>(a.t.done-b.t.done)||key(a.t).localeCompare(key(b.t))||(a.i-b.i));
+}
+function renderTodos(){
+  const wrap=document.getElementById('todoListWrap');
+  const left=todoData.filter(t=>!t.done).length,total=todoData.length;
+  if(wrap){
+    const rows=todoSorted();
+    const row=({t})=>`<div class="td-item${t.done?' done':''}"><label class="td-check"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTodo('${jsQuote(t.id)}',this.checked)"><span class="td-box" aria-hidden="true"></span></label><div class="td-main"><div class="td-text">${escHtml(t.text)}</div>${t.note?`<div class="td-note">${brText(t.note)}</div>`:''}<div class="td-meta">${todoDueHTML(t.due,t.done)}${t.done&&t.doneBy?`<span class="td-by">✓ ${escHtml(t.doneBy)} 完成</span>`:''}</div></div><div class="td-acts edit-only"><button type="button" onclick="editTodo('${jsQuote(t.id)}')">修改</button><button type="button" class="del" onclick="deleteTodo('${jsQuote(t.id)}')">刪除</button></div></div>`;
+    const undone=rows.filter(x=>!x.t.done),done=rows.filter(x=>x.t.done);
+    wrap.innerHTML=`<div class="td-progress"><div class="td-bar"><i style="width:${total?Math.round((total-left)/total*100):0}%"></i></div><b>${left?`還有 ${left} 項`:'全部完成 🎉'}</b><small>已完成 ${total-left} / ${total}</small></div>
+      <div class="td-list">${undone.map(row).join('')||'<div class="empty compact">都完成了！</div>'}</div>
+      ${done.length?`<details class="td-done"><summary>已完成（${done.length}）</summary>${done.map(row).join('')}</details>`:''}
+      <button type="button" class="td-add" onclick="addTodo()">＋ 新增待辦</button>`;
+  }
+  renderTodoBanner();
+}
+function toggleTodo(id,checked){
+  const t=todoData.find(x=>x.id===id);if(!t)return;
+  t.done=!!checked;if(checked){t.doneBy=todoWho();t.doneAt=new Date().toISOString();}else{delete t.doneBy;delete t.doneAt;}
+  persistTodos();renderTodos();
+}
+function todoFields(t){return [
+  {id:'text',label:'要做什麼',type:'textarea',rows:2,value:t.text||'',placeholder:'例：預約洞爺湖飯店接駁'},
+  {id:'due',label:'最晚哪天前完成（選填）',type:'date',value:t.due||''},
+  {id:'note',label:'備註（選填：預約編號、網址、誰負責…）',type:'textarea',rows:3,value:t.note||''}];}
+function addTodo(){
+  openFormModal({title:'新增出發前待辦',fields:todoFields({}),saveText:'新增',onSave:v=>{
+    if(!v.text){alert('請輸入要做什麼');return false;}
+    todoData.push({id:newItemId('todo'),text:v.text,due:v.due,note:v.note,done:false});persistTodos();renderTodos();}});
+}
+function editTodo(id){
+  const t=todoData.find(x=>x.id===id);if(!t)return;
+  openFormModal({title:'修改待辦',fields:todoFields(t),saveText:'儲存',onSave:v=>{
+    if(!v.text){alert('內容不能是空的');return false;}
+    Object.assign(t,{text:v.text,due:v.due,note:v.note});persistTodos();renderTodos();},onDelete:()=>deleteTodo(id,true)});
+}
+function deleteTodo(id,skipConfirm){
+  const i=todoData.findIndex(x=>x.id===id);if(i<0)return;
+  if(!skipConfirm&&!confirm(`刪除待辦「${todoData[i].text}」？（8 秒內可復原）`))return;
+  const removed=todoData.splice(i,1)[0];persistTodos();renderTodos();
+  offerUndo('已刪除待辦',()=>{todoData.splice(Math.min(i,todoData.length),0,removed);persistTodos();renderTodos();});
+}
+/* 行程頁頂端：出發前才顯示「出發前待辦還有幾項」，點了直接跳到清單 */
+function renderTodoBanner(){
+  const host=document.getElementById('view-itinerary');if(!host)return;
+  let el=document.getElementById('todoBanner');
+  const left=todoData.filter(t=>!t.done);
+  const beforeTrip=new Date()<new Date(2027,1,4);
+  if(!beforeTrip||!left.length){el?.remove();return;}
+  const late=left.filter(t=>{const n=todoDaysLeft(t.due);return n!=null&&n<=3;}).length;
+  if(!el){el=document.createElement('button');el.type='button';el.id='todoBanner';el.className='todo-banner';el.onclick=goToTodos;host.prepend(el);}
+  el.innerHTML=`<span class="tb-ic">✅</span><span class="tb-txt"><b>出發前待辦還有 ${left.length} 項</b>${late?`<small>${late} 項快到期或已過期</small>`:'<small>點這裡查看、勾選</small>'}</span><em>›</em>`;
+}
+function goToTodos(){setTab('guide');setTimeout(()=>document.getElementById('todoSection')?.scrollIntoView({behavior:'smooth',block:'start'}),80);}
+
 /* ---- 初次渲染 ---- */
 renderDayChips();
 renderDayContent();
 renderPackList();
 renderShopList();
+renderTodos();
 
 /* ============ 頁面初始化 ============ */
 renderRulesList();
