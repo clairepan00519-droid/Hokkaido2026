@@ -785,7 +785,7 @@ const days = [
 {dayNum:"1",date:"2/4",weekday:"四",region:"啟程・新千歲 → 支笏湖",enRegion:"桃園 → 新千歲 → 支笏湖",drive:"✈️ CI130 抵達後，16:30 前往支笏湖",title:"降落在冬天",dayDesc:"新千歲初見，支笏湖歇腳",wear:"機上薄外套；落地換上羽絨、毛帽與防滑鞋",weatherIco:"✈️",spots:[
     S("08:35 TPE → 13:35 CTS","transport","中華航空 CI130，桃園飛新千歲。",{dur:"約4小時",fullDesc:"抵達後依序入境、領行李。新千歲機場離支笏湖不遠，這天的重點是放慢步調、平安抵達旅館。",img:SCENE.airport}),
     S("新千歲機場逛逛","attraction","國內線航廈的美食街、甜點店與伴手禮區，等車前慢慢逛。",{tags:["輕鬆"],dur:"約2–2.5小時",fullDesc:"國內線航廈集合北海道各地的拉麵、甜點與伴手禮品牌，也有可以看飛機起降的空間。16:30 出發前往支笏湖，行李不必拖著到處走，可先找寄物處。",img:SCENE.airport}),
-    S("16:30 機場 → 17:10 水之謌","transport","從新千歲機場前往支笏湖畔的旅館。",{dur:"約40分鐘",fullDesc:"冬季傍晚天色暗得早，車程沿途多為森林與雪地。交通方式依預約內容為準。",img:SCENE.ice})
+    S("16:30 機場 → 17:10 水之謌","transport","從新千歲機場前往支笏湖畔的旅館。",{removed:true,dur:"約40分鐘",fullDesc:"冬季傍晚天色暗得早，車程沿途多為森林與雪地。交通方式依預約內容為準。",img:SCENE.ice})
   ],moreSpots:[
     hotel(H_MIZU,"支笏湖畔溫泉旅館，連住兩晚。",SCENE.ice,{tags:["連住2晚"]})
   ]},
@@ -796,8 +796,8 @@ const days = [
     hotel(H_MIZU,"第二晚，續住。",SCENE.ice)
   ]},
 {dayNum:"3",date:"2/6",weekday:"六",region:"支笏湖 → 千歲 → 札幌",enRegion:"支笏湖 → 千歲 → 札幌",drive:"🚌 13:35 支笏湖出發，千歲站轉 JR 往札幌",title:"城市開始飄香",dayDesc:"紅磚廳舍與札幌的第一餐",wear:"市區洋蔥式穿搭，室內暖氣強",weatherIco:"🚃",spots:[
-    S("13:35 支笏湖 → 14:10 千歲站","transport","離開支笏湖，前往 JR 千歲站。",{dur:"約35分鐘",fullDesc:"上午可在旅館悠閒退房，中午後出發。",img:SCENE.ice}),
-    S("千歲站 → 札幌","transport","JR 往札幌，約 30–40 分鐘。",{dur:"約30–40分鐘",fullDesc:"千歲線往札幌班次多，有行李時可選快速 Airport 停靠的班次。抵達後飯店就在札幌站上方。",img:SCENE.doucho}),
+    S("13:35 支笏湖 → 14:10 千歲站","transport","離開支笏湖，前往 JR 千歲站。",{removed:true,dur:"約35分鐘",fullDesc:"上午可在旅館悠閒退房，中午後出發。",img:SCENE.ice}),
+    S("千歲站 → 札幌","transport","JR 往札幌，約 30–40 分鐘。",{removed:true,dur:"約30–40分鐘",fullDesc:"千歲線往札幌班次多，有行李時可選快速 Airport 停靠的班次。抵達後飯店就在札幌站上方。",img:SCENE.doucho}),
     S("北海道廳舊本廳舍（紅磚廳舍）","attraction","1888 年完工的美式新巴洛克紅磚建築，雪中最上相。",{dur:"約30–60分鐘",fullDesc:"紅磚廳舍是札幌的代表建築，前庭在冬天積滿雪。建築目前有整修計畫，內部是否開放請出發前確認；即使只在外面拍照也很值得。離札幌站步行約 8 分鐘。",img:SCENE.doucho})
   ],moreSpots:[
     hotel(H_NIKKO,"札幌站正上方的飯店，交通最方便。",SCENE.doucho,{tags:["札幌站直結"]})
@@ -1256,14 +1256,14 @@ function saveSpotEdit(dayIdx, i, idx){
   updateSpotCount();
 }
 function updateSpotCount(){
-  let total = days.reduce((a,d)=>a+d.spots.length + (d.moreSpots?d.moreSpots.length:0),0);
+  let total = days.reduce((a,d)=>a+d.spots.filter(x=>!x.removed).length + (d.moreSpots?d.moreSpots.length:0),0);
   Object.values(customSpotsStore).forEach(arr => total += (Array.isArray(arr)?arr.filter(x=>x&&!x.deleted).length:0));
   document.getElementById('spotCount').textContent = total;
 }
 
 /* ============ 景點排序 (LocalStorage 永久保存) ============ */
-/* hk27：交通卡片不放在「今日亮點」，改放在「交通」分頁 */
-const MAIN_CATS = ['attraction','activity'];
+/* hk28：航班卡片放回「今日亮點」；其他交通卡片已移除（交通資訊都在「交通」分頁） */
+const MAIN_CATS = ['attraction','activity','transport'];
 const LIFE_CATS = ['food','shopping','hotel'];
 let orderStore = JSON.parse(localStorage.getItem('hokkaido_order')) || {};
 function persistOrder(){ safeSetItem('hokkaido_order', orderStore); }
@@ -1479,10 +1479,10 @@ function allSearchableSpots(){
       const desc=currentFieldValue(key,'desc',spot.desc)||spot.desc||'';
       const full=currentFieldValue(key,'fullDesc',spot.fullDesc)||spot.fullDesc||'';
       const info=currentBuiltInInfo(key,spot.customInfo||'')||'';
-      const listType=spot.cat==='transport'?'transport':(MAIN_CATS.includes(spot.cat)?'main':'more');
+      const listType=MAIN_CATS.includes(spot.cat)?'main':'more';
       out.push({dayIdx,key,listType,name,desc,cat:spot.cat,text:[name,desc,full,info,(spot.tags||[]).join(' '),day.region,day.title].join(' ').toLocaleLowerCase('zh-Hant')});
     };
-    (day.spots||[]).forEach((spot,i)=>add(spot,`d${dayIdx}-m${i}`));
+    (day.spots||[]).forEach((spot,i)=>{if(!spot.removed)add(spot,`d${dayIdx}-m${i}`);});
     (day.moreSpots||[]).forEach((spot,i)=>add(spot,`d${dayIdx}-s${i}`));
     (customSpotsStore[dayIdx]||[]).forEach((spot,i)=>{if(!spot.deleted)add(spot,`d${dayIdx}-c${i}`);});
     const plan=transportPlans[dayIdx];
@@ -1821,7 +1821,7 @@ function renderDayContent(){
         <div class="spots-pane${curSubTab==='more'?' active':''}" data-view="life">${secondaryCardsHTML}${addSpotFormHTML}</div>
       </div>
       <div class="subtab-content${curSubTab==='weather'?' active':''}" data-type="weather">${curSubTab==='weather'?dayWeatherPanelHTML(activeDay):''}</div>
-      <div class="subtab-content${curSubTab==='transport'?' active':''}" data-type="transport">${transportHTML}${transportSpotCardsHTML(activeDay)}</div>
+      <div class="subtab-content${curSubTab==='transport'?' active':''}" data-type="transport">${transportHTML}</div>
       <div class="subtab-content${curSubTab==='routemap'?' active':''}" data-type="routemap" style="background:#EFF2F7; border-radius:var(--r-lg); padding:12px; margin-bottom:16px;">${routeMapHTML}</div>
       <div class="subtab-content${curSubTab==='eat'?' active':''}" data-type="eat">${curSubTab==='eat'?dayEatPanelHTML(activeDay):''}</div>
     </div>
@@ -3109,7 +3109,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk27-2026-10-11';
+const APP_VERSION='hk28-2026-10-11';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -3188,7 +3188,7 @@ function todayRemindHTML(){
 /* ---------- 自駕即時路況與緊急聯絡（可修改、刪除、新增、還原） ---------- */
 const LIVE_SEED=[
   {id:'lv-jr',kind:'link',group:'交通即時狀況',title:'JR 北海道 列車運行情報',text:'大雪、強風時的停駛與延誤以此為準；移動日早上先看一次。',url:'https://www3.jrhokkaido.co.jp/webunkou/'},
-  {id:'lv-road',kind:'link',group:'交通即時狀況',title:'北の道ナビ（北海道道路情報）',text:'國道通行止め、路面攝影機與積雪狀況；搭巴士或自駕前確認。',url:'https://northern-road.jp/navi/'},
+  {id:'lv-road',kind:'link',group:'交通即時狀況',title:'北の道ナビ（北海道道路情報）',text:'國道通行止め、路面攝影機與積雪狀況；搭巴士或自駕前確認。',url:'https://northern-road.ceri.go.jp/navi/'},
   {id:'lv-cts',kind:'link',group:'交通即時狀況',title:'新千歲機場 官方網站',text:'去回程日確認航班狀態與機場交通。',url:'https://www.new-chitose-airport.jp/'},
   {id:'lv-jartic',kind:'link',group:'交通即時狀況',title:'JARTIC 日本道路交通情報',text:'全國道路壅塞與規制，可看行進路線整體狀況。',url:'https://www.jartic.or.jp/'},
   {id:'lv-jma',kind:'link',group:'天氣警報',title:'氣象廳 警報・注意報',text:'大雪、暴風雪、低溫警報以此為準；可切換到石狩・後志・胆振地方。',url:'https://www.jma.go.jp/bosai/warning/'},
@@ -3198,6 +3198,9 @@ let liveData=[];
 function initLive(){
   let stored=null;try{stored=JSON.parse(localStorage.getItem('hokkaido_livelinks'));}catch(e){}
   liveData=Array.isArray(stored)?normalizeStructuredList('hokkaido_livelinks',stored):structuredClone(LIVE_SEED);
+  /* hk28：北の道ナビ網址已改（2024/3/29），舊網址自動換新 */
+  let fixedUrl=false;liveData.forEach(x=>{if(x&&typeof x.url==='string'&&/\/\/(www\.)?northern-road\.jp\//.test(x.url)){x.url=x.url.replace(/\/\/(www\.)?northern-road\.jp\//,'//northern-road.ceri.go.jp/');fixedUrl=true;}});
+  if(fixedUrl&&Array.isArray(stored))persistLive();
   const before=liveData.length;
   liveData=liveData.filter(x=>x.id!=='lv-emg'&&x.group!=='緊急聯絡');   /* 已移除「緊急聯絡」欄 */
   if(Array.isArray(stored)&&liveData.length!==before)persistLive();
@@ -3405,7 +3408,7 @@ function collectSpots(filterFn){
       const name=currentFieldValue(key,'name',spot.name)||spot.name;
       out.push({dayIdx:di,key,cat:spot.cat,name,desc:currentFieldValue(key,'desc',spot.desc)||spot.desc||'',hours:currentFieldValue(key,'hours',spot.hours)||'',tags:spot.tags||[],nav:currentFieldValue(key,'mapQuery',null)||name,img:spotCoverFor(key,spot)});
     };
-    (day.spots||[]).forEach((s,i)=>add(s,`d${dayIdx}-m${i}`));
+    (day.spots||[]).forEach((s,i)=>{if(!s.removed)add(s,`d${dayIdx}-m${i}`);});
     (day.moreSpots||[]).forEach((s,i)=>add(s,`d${dayIdx}-s${i}`));
     (customSpotsStore[dayIdx]||[]).forEach((s,i)=>{if(!s.deleted)add(s,`d${dayIdx}-c${i}`);});
   });
@@ -3824,14 +3827,6 @@ function plannedEntriesFor(dayIdx){
   masterKeySet().forEach(key=>{if(planOf(key)===dayIdx){const spot=spotByKey(key);if(spot)out.push({spot,key,fixedMeta:{dayIdx,planned:true}});}});
   eatShopStore.forEach(c=>{if(planOf('es:'+c.id)===dayIdx)out.push({spot:eatCustomSpot(c),key:'es:'+c.id,fixedMeta:{dayIdx,planned:true}});});
   return out;
-}
-/* hk27：交通類的卡片（航班、接駁等）放在「交通」分頁最下面，筆記、照片照常可用 */
-function transportSpotCardsHTML(dayIdx){
-  const hidden=new Set(hiddenFixedSpotsStore[dayIdx]||[]);
-  const shown=spotsShownOnDay(dayIdx);
-  const list=[...shown.fixed.filter(o=>!hidden.has(o.key)),...shown.custom].filter(o=>o.spot&&o.spot.cat==='transport');
-  if(!list.length)return '';
-  return `<section class="tp-spot-cards"><h4>交通卡片<small>可以記筆記、放票券截圖或照片</small></h4>${list.map(o=>spotCardHTML(o.spot,o.key,false,o.customMeta,null,o.fixedMeta)).join('')}</section>`;
 }
 function getNaturalList(dayIdx, listType){
   const cats = listType === 'main' ? MAIN_CATS : LIFE_CATS;
@@ -4772,7 +4767,7 @@ function isSpotMoved(key){const n=naturalDayOf(key),e=spotDayOf(key);return n!=n
 function spotsShownOnDay(dayIdx){
   const fixed=[],custom=[];
   days.forEach((d,di)=>{
-    d.spots.forEach((s,i)=>{const key=`d${di}-m${i}`;if(spotDayOf(key)===dayIdx)fixed.push({spot:s,key,fixedMeta:{dayIdx}});});
+    d.spots.forEach((s,i)=>{const key=`d${di}-m${i}`;if(!s.removed&&spotDayOf(key)===dayIdx)fixed.push({spot:s,key,fixedMeta:{dayIdx}});});
     (d.moreSpots||[]).forEach((s,i)=>{const key=`d${di}-s${i}`;if(spotDayOf(key)===dayIdx)fixed.push({spot:s,key,fixedMeta:{dayIdx}});});
     getCustomSpots(di).forEach((s,i)=>{const key=`d${di}-c${i}`;if(!s.deleted&&spotDayOf(key)===dayIdx)custom.push({spot:s,key,customMeta:{dayIdx:di,i}});});
   });
