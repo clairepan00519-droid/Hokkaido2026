@@ -1262,7 +1262,8 @@ function updateSpotCount(){
 }
 
 /* ============ 景點排序 (LocalStorage 永久保存) ============ */
-const MAIN_CATS = ['attraction','activity','transport'];
+/* hk27：交通卡片不放在「今日亮點」，改放在「交通」分頁 */
+const MAIN_CATS = ['attraction','activity'];
 const LIFE_CATS = ['food','shopping','hotel'];
 let orderStore = JSON.parse(localStorage.getItem('hokkaido_order')) || {};
 function persistOrder(){ safeSetItem('hokkaido_order', orderStore); }
@@ -1478,7 +1479,7 @@ function allSearchableSpots(){
       const desc=currentFieldValue(key,'desc',spot.desc)||spot.desc||'';
       const full=currentFieldValue(key,'fullDesc',spot.fullDesc)||spot.fullDesc||'';
       const info=currentBuiltInInfo(key,spot.customInfo||'')||'';
-      const listType=MAIN_CATS.includes(spot.cat)?'main':'more';
+      const listType=spot.cat==='transport'?'transport':(MAIN_CATS.includes(spot.cat)?'main':'more');
       out.push({dayIdx,key,listType,name,desc,cat:spot.cat,text:[name,desc,full,info,(spot.tags||[]).join(' '),day.region,day.title].join(' ').toLocaleLowerCase('zh-Hant')});
     };
     (day.spots||[]).forEach((spot,i)=>add(spot,`d${dayIdx}-m${i}`));
@@ -1820,7 +1821,7 @@ function renderDayContent(){
         <div class="spots-pane${curSubTab==='more'?' active':''}" data-view="life">${secondaryCardsHTML}${addSpotFormHTML}</div>
       </div>
       <div class="subtab-content${curSubTab==='weather'?' active':''}" data-type="weather">${curSubTab==='weather'?dayWeatherPanelHTML(activeDay):''}</div>
-      <div class="subtab-content${curSubTab==='transport'?' active':''}" data-type="transport">${transportHTML}</div>
+      <div class="subtab-content${curSubTab==='transport'?' active':''}" data-type="transport">${transportHTML}${transportSpotCardsHTML(activeDay)}</div>
       <div class="subtab-content${curSubTab==='routemap'?' active':''}" data-type="routemap" style="background:#EFF2F7; border-radius:var(--r-lg); padding:12px; margin-bottom:16px;">${routeMapHTML}</div>
       <div class="subtab-content${curSubTab==='eat'?' active':''}" data-type="eat">${curSubTab==='eat'?dayEatPanelHTML(activeDay):''}</div>
     </div>
@@ -3108,7 +3109,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk26-2026-10-10';
+const APP_VERSION='hk27-2026-10-11';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -3823,6 +3824,14 @@ function plannedEntriesFor(dayIdx){
   masterKeySet().forEach(key=>{if(planOf(key)===dayIdx){const spot=spotByKey(key);if(spot)out.push({spot,key,fixedMeta:{dayIdx,planned:true}});}});
   eatShopStore.forEach(c=>{if(planOf('es:'+c.id)===dayIdx)out.push({spot:eatCustomSpot(c),key:'es:'+c.id,fixedMeta:{dayIdx,planned:true}});});
   return out;
+}
+/* hk27：交通類的卡片（航班、接駁等）放在「交通」分頁最下面，筆記、照片照常可用 */
+function transportSpotCardsHTML(dayIdx){
+  const hidden=new Set(hiddenFixedSpotsStore[dayIdx]||[]);
+  const shown=spotsShownOnDay(dayIdx);
+  const list=[...shown.fixed.filter(o=>!hidden.has(o.key)),...shown.custom].filter(o=>o.spot&&o.spot.cat==='transport');
+  if(!list.length)return '';
+  return `<section class="tp-spot-cards"><h4>交通卡片<small>可以記筆記、放票券截圖或照片</small></h4>${list.map(o=>spotCardHTML(o.spot,o.key,false,o.customMeta,null,o.fixedMeta)).join('')}</section>`;
 }
 function getNaturalList(dayIdx, listType){
   const cats = listType === 'main' ? MAIN_CATS : LIFE_CATS;
