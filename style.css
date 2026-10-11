@@ -2597,8 +2597,3 @@ details.todo-section[open]>summary.todo-sum{margin-bottom:8px;}
 .rv-moods{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px;}
 .rv-moods .rv-mood{display:inline-flex;align-items:center;gap:2px;margin-left:0;font-size:13px;font-weight:800;padding:2px 10px;border-radius:999px;background:#EEF3FB;color:#27478C;}
 .rv-moods .rv-mood img{width:26px;height:26px;object-fit:contain;margin:-4px 0 -4px -6px;}
-
-/* ===== hk27：交通分頁裡的交通卡片 ===== */
-.tp-spot-cards{margin:14px 0 4px;}
-.tp-spot-cards h4{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 8px;font-size:16px;color:var(--blue);}
-.tp-spot-cards h4 small{font-size:12.5px;font-weight:600;color:#5A6680;}
