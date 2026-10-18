@@ -235,7 +235,7 @@ const SUPABASE_ANON_KEY = ((window.HOKKAIDO_CONFIG||{}).SUPABASE_ANON_KEY||"").t
 const CLOUD_CONFIGURED = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 const SYNC_META_KEY = 'hokkaido_sync_meta_v3';
-const SYNC_KEYS = ['hokkaido_notes','hokkaido_info_overrides','hokkaido_field_overrides','hokkaido_photos','hokkaido_covers','hokkaido_custom_spots','hokkaido_order','hokkaido_block_order','hokkaido_route_maps','hokkaido_transport_extras','hokkaido_foliage_maps','hokkaido_pack','hokkaido_shop','hokkaido_rules','hokkaido_docs','hokkaido_hidden_fixed_spots','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_photo_pos','hokkaido_marks','hokkaido_livelinks','hokkaido_mama','hokkaido_surprises','hokkaido_tips_seen','hokkaido_eat_area','hokkaido_eat_plan','hokkaido_detail_covers','hokkaido_hidden_orig','hokkaido_transport_custom','hokkaido_eat_area_custom','hokkaido_sub_spots','hokkaido_spot_day','hokkaido_eat_area_order','hokkaido_todos','hokkaido_reviews'];
+const SYNC_KEYS = ['hokkaido_notes','hokkaido_info_overrides','hokkaido_field_overrides','hokkaido_photos','hokkaido_covers','hokkaido_custom_spots','hokkaido_order','hokkaido_block_order','hokkaido_route_maps','hokkaido_transport_extras','hokkaido_foliage_maps','hokkaido_pack','hokkaido_shop','hokkaido_rules','hokkaido_docs','hokkaido_hidden_fixed_spots','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_photo_pos','hokkaido_marks','hokkaido_livelinks','hokkaido_mama','hokkaido_surprises','hokkaido_tips_seen','hokkaido_eat_area','hokkaido_eat_plan','hokkaido_detail_covers','hokkaido_hidden_orig','hokkaido_transport_custom','hokkaido_eat_area_custom','hokkaido_sub_spots','hokkaido_spot_day','hokkaido_eat_area_order','hokkaido_todos','hokkaido_reviews','hokkaido_place_pos','hokkaido_place_ug'];
 const MEDIA_SYNC_KEYS = new Set(['hokkaido_photos','hokkaido_covers','hokkaido_route_maps','hokkaido_transport_extras','hokkaido_foliage_maps']);
 const STRUCTURED_LIST_KEYS = new Set(['hokkaido_shop','hokkaido_rules','hokkaido_todos','hokkaido_docs','hokkaido_transport_cards','hokkaido_eatshop','hokkaido_livelinks','hokkaido_surprises']);
 const cloudSync = {enabled:false, starting:false, applyingRemote:false, pending:{}, timer:null, pollTimer:null, lastError:null, ready:false};
@@ -676,7 +676,7 @@ function flushPendingDayRender(){
 }
 function applyStoreUpdate(key,jsonStr){
   let parsed;try{parsed=JSON.parse(jsonStr);}catch(e){return;}
-  switch(key){case'hokkaido_notes':notesStore=parsed;break;case'hokkaido_info_overrides':infoOverrideStore=parsed||{};break;case'hokkaido_field_overrides':fieldOverrideStore=parsed||{};break;case'hokkaido_photos':photoStore=parsed;break;case'hokkaido_covers':coverStore=parsed;break;case'hokkaido_custom_spots':customSpotsStore=parsed;break;case'hokkaido_order':orderStore=parsed;break;case'hokkaido_block_order':blockOrderStore=parsed;break;case'hokkaido_route_maps':routeMapStore=parsed;break;case'hokkaido_transport_extras':transportExtrasStore=parsed||{};break;case'hokkaido_foliage_maps':foliageMapStore=Array.isArray(parsed)?parsed:[];renderFoliageMaps();return;case'hokkaido_pack':packData=migratePackCategoryNames(parsed);window._packLive=packData;if(isPackComposerEditing()){window._packRemoteRenderPending=true;}else{renderPackList();}return;case'hokkaido_shop':shopData=normalizeStructuredList('hokkaido_shop',parsed);renderShopList();return;case'hokkaido_rules':rulesData=normalizeStructuredList('hokkaido_rules',parsed);renderRulesList();return;case'hokkaido_docs':docsData=mergeDocsWithDefaults(parsed);persistDocs();renderDocsList();return;case'hokkaido_transport_cards':transportCardsData=normalizeStructuredList('hokkaido_transport_cards',parsed);renderTransportCards();return;case'hokkaido_eatshop':eatShopStore=normalizeStructuredList('hokkaido_eatshop',parsed);if(typeof activeDay==='string')renderDayContent();return;case'hokkaido_photo_pos':photoPosStore=parsed||{};safeRenderDayContent();return;case'hokkaido_marks':marksStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderMarksBar();safeRenderDayContent();return;case'hokkaido_livelinks':liveData=normalizeStructuredList('hokkaido_livelinks',parsed);renderLive();return;case'hokkaido_surprises':surprisesData=normalizeStructuredList('hokkaido_surprises',parsed);renderSurpriseAdmin();return;case'hokkaido_tips_seen':tipsSeen=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};return;case'hokkaido_transport_custom':transportCustomStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_detail_covers':detailCoverStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_hidden_orig':hiddenOrigStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_plan':eatPlanStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area':eatAreaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};if(typeof activeDay==='string')safeRenderDayContent();return;case'hokkaido_mama':mamaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};refreshMamaButtons(null);if(document.getElementById('mamaModal'))renderMamaList();return;case'hokkaido_hidden_fixed_spots':hiddenFixedSpotsStore=parsed||{};safeRenderDayContent();if(typeof updateSpotCount==='function')updateSpotCount();return;case'hokkaido_sub_spots':subSpotStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area_custom':eatAreaCustom=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;case'hokkaido_spot_day':spotDayStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderDayChips();safeRenderDayContent();return;case'hokkaido_reviews':reviewStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_todos':todoData=normalizeStructuredList('hokkaido_todos',parsed);renderTodos();return;case'hokkaido_eat_area_order':eatAreaOrder=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;default:return;}
+  switch(key){case'hokkaido_notes':notesStore=parsed;break;case'hokkaido_info_overrides':infoOverrideStore=parsed||{};break;case'hokkaido_field_overrides':fieldOverrideStore=parsed||{};break;case'hokkaido_photos':photoStore=parsed;break;case'hokkaido_covers':coverStore=parsed;break;case'hokkaido_custom_spots':customSpotsStore=parsed;break;case'hokkaido_order':orderStore=parsed;break;case'hokkaido_block_order':blockOrderStore=parsed;break;case'hokkaido_route_maps':routeMapStore=parsed;break;case'hokkaido_transport_extras':transportExtrasStore=parsed||{};break;case'hokkaido_foliage_maps':foliageMapStore=Array.isArray(parsed)?parsed:[];renderFoliageMaps();return;case'hokkaido_pack':packData=migratePackCategoryNames(parsed);window._packLive=packData;if(isPackComposerEditing()){window._packRemoteRenderPending=true;}else{renderPackList();}return;case'hokkaido_shop':shopData=normalizeStructuredList('hokkaido_shop',parsed);renderShopList();return;case'hokkaido_rules':rulesData=normalizeStructuredList('hokkaido_rules',parsed);renderRulesList();return;case'hokkaido_docs':docsData=mergeDocsWithDefaults(parsed);persistDocs();renderDocsList();return;case'hokkaido_transport_cards':transportCardsData=normalizeStructuredList('hokkaido_transport_cards',parsed);renderTransportCards();return;case'hokkaido_eatshop':eatShopStore=normalizeStructuredList('hokkaido_eatshop',parsed);if(typeof activeDay==='string')renderDayContent();return;case'hokkaido_photo_pos':photoPosStore=parsed||{};safeRenderDayContent();return;case'hokkaido_marks':marksStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderMarksBar();safeRenderDayContent();return;case'hokkaido_livelinks':liveData=normalizeStructuredList('hokkaido_livelinks',parsed);renderLive();return;case'hokkaido_surprises':surprisesData=normalizeStructuredList('hokkaido_surprises',parsed);renderSurpriseAdmin();return;case'hokkaido_tips_seen':tipsSeen=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};return;case'hokkaido_transport_custom':transportCustomStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_detail_covers':detailCoverStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_hidden_orig':hiddenOrigStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_plan':eatPlanStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area':eatAreaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};if(typeof activeDay==='string')safeRenderDayContent();return;case'hokkaido_mama':mamaStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};refreshMamaButtons(null);if(document.getElementById('mamaModal'))renderMamaList();return;case'hokkaido_hidden_fixed_spots':hiddenFixedSpotsStore=parsed||{};safeRenderDayContent();if(typeof updateSpotCount==='function')updateSpotCount();return;case'hokkaido_sub_spots':subSpotStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_eat_area_custom':eatAreaCustom=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;case'hokkaido_spot_day':spotDayStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};renderDayChips();safeRenderDayContent();return;case'hokkaido_place_pos':placePosStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};if(typeof activeDay==='string')safeRenderDayContent();return;case'hokkaido_place_ug':placeUgStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};if(typeof activeDay==='string')safeRenderDayContent();return;case'hokkaido_reviews':reviewStore=(parsed&&typeof parsed==='object'&&!Array.isArray(parsed))?parsed:{};safeRenderDayContent();return;case'hokkaido_todos':todoData=normalizeStructuredList('hokkaido_todos',parsed);renderTodos();return;case'hokkaido_eat_area_order':eatAreaOrder=Array.isArray(parsed)?parsed:[];safeRenderDayContent();return;default:return;}
   safeRenderDayContent();if(typeof updateSpotCount==='function')updateSpotCount();
 }
 function scheduleCloudPush(key,valueObj){
@@ -1439,6 +1439,7 @@ function renderDayChips(){
   dayScroll.innerHTML = `<button class="today-chip" onclick="goToToday()">今日</button>`
     +`<div class="day-chip special-chip ${activeDay==='eat'?'active':''}" onclick="setActiveDay('eat')"><div class="d"><img class="chip-ic" src="images/nav-food.webp" alt=""></div><div class="m">吃·北海道</div></div>`
     +`<div class="day-chip special-chip ${activeDay==='shop'?'active':''}" onclick="setActiveDay('shop')"><div class="d"><img class="chip-ic" src="images/nav-shopping.webp" alt=""></div><div class="m">逛·北海道</div></div>`
+    +`<div class="day-chip special-chip map-chip ${activeDay==='map'?'active':''}" onclick="setActiveDay('map')"><div class="d"><img class="chip-ic" src="images/nav-route.webp" alt=""></div><div class="m">札幌地圖</div></div>`
     +days.map((d,i)=>`
     <div class="day-chip ${i===activeDay?'active':''} ${i===today?'is-today':''}${daySnowy(i)?' snowy':''}" data-i="${i}"${daySnowy(i)?' title="預報大雪或強風"':''} onclick="setActiveDay(${i})">
       <div class="d">${d.date}</div>
@@ -1758,6 +1759,8 @@ function fuelPricePanel(day){
 
 function renderDayContent(){
   if(window._detailKey)setTimeout(()=>{if(document.getElementById('spotDetailSheet'))renderSpotDetail(false);},0);
+  if(activeDay==='map'){renderPlaceMapView();renderDayTools();return;}
+  if(typeof mapUI!=='undefined'&&mapUI.map)destroyPlaceMap();
   if(typeof activeDay==='string'){renderEatShopView(activeDay);renderDayTools();return;}
   renderDayTools();
   rememberOpenSpotCards();
@@ -3109,7 +3112,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk28-2026-10-11';
+const APP_VERSION='hk29-2026-10-18';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -3874,15 +3877,15 @@ function renderEatShopView(kind){
     const emptyArea=!its.length&&!cus.length;
     if(emptyArea&&!isCustomArea(a))return '';
     const cards=its.map(it=>gallCardHTML({...it,kind,walkFrom:(AREA_ORIGIN[a]||a),areaKey:it.key})).join('')
-      +cus.map(c=>gallCardHTML({...esCardData(c),kind,walkFrom:(AREA_ORIGIN[a]||a),editId:c.id})).join('');
+      +cus.map(c=>gallCardHTML({...esCardData(c),kind,area:c.area,walkFrom:(AREA_ORIGIN[a]||a),editId:c.id})).join('');
     const qa=jsQuote(a),nAreas=allEatAreas().length;
     const ctl=`<span class="edit-only area-ctl">${gi>0?`<button type="button" onclick="moveEatArea('${qa}',-1)" aria-label="往上移">▲ 上移</button>`:''}${gi<nAreas-1?`<button type="button" onclick="moveEatArea('${qa}',1)" aria-label="往下移">▼ 下移</button>`:''}${isCustomArea(a)?`<button type="button" onclick="renameEatArea('${qa}')">改名</button><button type="button" class="del" onclick="deleteEatArea('${qa}')">刪除</button>`:''}</span>`;
     return `<section class="eatshop-group${emptyArea?' empty-area':''}" id="eatshop-g${gi}"><h3><span>${escHtml(a)}</span><small>${its.length+cus.length} 個</small>${ctl}</h3>${emptyArea?'<div class="dp-empty edit-only">這個區域還沒有項目：按下方「＋ 新增」，或在任一張卡片按「區域」改到這裡。</div>':`<div class="gall-grid">${cards}</div>`}</section>`;
   }).join('');
   const orphan=custom.filter(c=>!used.has(c.id));
-  const orphanHTML=orphan.length?`<section class="eatshop-group"><h3><span>我的收藏（未分區）</span></h3><div class="gall-grid">${orphan.map(c=>gallCardHTML({...esCardData(c),kind,editId:c.id})).join('')}</div></section>`:'';
+  const orphanHTML=orphan.length?`<section class="eatshop-group"><h3><span>我的收藏（未分區）</span></h3><div class="gall-grid">${orphan.map(c=>gallCardHTML({...esCardData(c),kind,area:c.area,editId:c.id})).join('')}</div></section>`:'';
   const chips=allEatAreas().map((a,gi)=>({a,gi})).filter(({a})=>items.some(it=>it.area===a)||custom.some(c=>c.area===a)).map(({a,gi})=>`<button type="button" onclick="document.getElementById('eatshop-g${gi}')?.scrollIntoView({behavior:'smooth',block:'start'})">${escHtml(a)}</button>`).join('');
-  dayContent.innerHTML=`<div class="eatshop-hero"><img class="eh-ic" src="${isEat?NAV_IC.food:NAV_IC.shopping}" alt=""><h2>${word}·北海道</h2></div>
+  dayContent.innerHTML=`<button type="button" class="eatshop-mapbtn" onclick="setActiveDay('map')"><img src="images/nav-route.webp" alt=""><span><b>打開札幌吃逛地圖</b><small>看位置、距離，哪些可以走地下不用踩雪</small></span><em>›</em></button><div class="eatshop-hero"><img class="eh-ic" src="${isEat?NAV_IC.food:NAV_IC.shopping}" alt=""><h2>${word}·北海道</h2></div>
     ${chips?`<div class="eatshop-chips">${chips}</div>`:''}
     ${sections||emptyArtHTML('目前沒有候選項目。')}${orphanHTML}
     ${removedEatShopHTML(kind)}
@@ -4445,7 +4448,7 @@ function gallCardHTML(o){
   if(o.planDay!=null)planBtn=(p===o.planDay)?`<button type="button" class="on" onclick="unplanItem('${q}')">移出今天</button>`:`<button type="button" class="pri" onclick="planTodayQuick('${q}',${o.planDay})">排入今天</button>`;
   else planBtn=`<button type="button" class="${p!=null?'on':'pri'}" onclick="openPlanModal('${q}')">${p!=null?'改日期':'排入日期'}</button>`;
   const edit=o.editId?`<button type="button" class="edit-only" onclick="editEatShop('${o.editId}')">修改</button><button type="button" class="edit-only" onclick="deleteEatShop('${o.editId}')">刪除</button>`:(o.areaKey?`<button type="button" class="edit-only" onclick="editEatArea('${o.areaKey}')">區域</button>`:'');
-  return `<article class="gall-card"><div class="gall-img" onclick="openSpotDetail('${q}')">${cover}${favBtnHTML(o.key,'on-cover')}${planTag}</div><div class="gall-body"><strong>${escHtml(o.name)}${statusChipHTML(o.key)}</strong>${hoursHTML}${o.desc?`<p>${escHtml(o.desc)}</p>`:''}<div class="gall-actions"><a href="${escAttr(mapsLink(o.nav))}" target="_blank" rel="noopener">導航</a>${walk}<button type="button" onclick="openSpotDetail('${q}')">詳情</button>${resv}${planBtn}${edit}</div></div></article>`;
+  return `<article class="gall-card"><div class="gall-img" onclick="openSpotDetail('${q}')">${cover}${favBtnHTML(o.key,'on-cover')}${planTag}</div><div class="gall-body"><strong>${escHtml(o.name)}${statusChipHTML(o.key)}</strong>${hoursHTML}${o.desc?`<p>${escHtml(o.desc)}</p>`:''}<div class="gall-actions"><a href="${escAttr(mapsLink(o.nav))}" target="_blank" rel="noopener">導航</a>${walk}${(typeof isSapporoArea==='function'&&isSapporoArea(o.area))?`<button type="button" onclick="openPlaceOnMap('${q}')">地圖</button>`:''}<button type="button" onclick="openSpotDetail('${q}')">詳情</button>${resv}${planBtn}${edit}</div></div></article>`;
 }
 /* ---------- 照片：大圖＋縮圖列（點縮圖換大圖，可左右切換），管理按鈕在編輯模式 ---------- */
 function photoViewerHTML(idx,spot){
@@ -4985,6 +4988,367 @@ function deleteMyReview(i){
   const prev=day[me];delete day[me];persistReviews();userRender();
   offerUndo('已刪除回顧',()=>{(reviewStore[i]=reviewStore[i]||{})[me]=prev;persistReviews();userRender();});
 }
+
+
+/* =====================================================================
+   hk29：札幌吃逛地圖（移植京丹雅行 v75／v76／v82）＋地下街判斷
+   ===================================================================== */
+/* hk29：札幌吃逛地圖獨立成一個晶片 */
+function isSapporoArea(a){return !!a&&!['小樽','千歲・支笏湖'].includes(a);}
+function renderPlaceMapView(){
+  destroyPlaceMap();
+  dayContent.innerHTML=placeMapHTML();
+  initPlaceMap();
+}
+function openPlaceOnMap(key,pick){
+  mapUI.sel=key;mapUI.area='';mapUI.focusSel=true;
+  const o=placeByKey(key);
+  if(o&&mapUI.show!=='all'&&mapUI.show!==o.kind)mapUI.show='all';
+  if(typeof closeSpotDetail==='function')closeSpotDetail();
+  activeDay='map';renderDayChips();renderDayContent();
+  if(pick)setTimeout(()=>placePickFor(key),200);
+  setTimeout(()=>document.querySelector('.pm-card')?.scrollIntoView({behavior:'smooth',block:'start'}),60);
+}
+/* 約略位置（依地址估算，請在編輯模式拖曳校正；你校正過就以你的為準）。不確定的店不放，請在地圖上點一下標位置 */
+const PLACE_SEED={
+  'スープカレーGARAKU sitatte sapporo店':[43.06458,141.35262],
+  '寿司と炉端焼 四季花まる 北口店':[43.07020,141.35060],
+  'シハチ鮮魚店 狸COMICHI店':[43.05770,141.35560]
+};
+const AREA_POINTS={'札幌站周邊':[43.06750,141.35150],'大通・狸小路':[43.05900,141.35350],'札幌其他':[43.06200,141.35400]};
+var placePosStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_place_pos'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
+function persistPlacePos(){safeSetItem('hokkaido_place_pos',placePosStore);}
+/* 家＝JRタワーホテル 日航札幌（札幌站東側、直通地下街）。位置是約略的，編輯模式可拖曳校正，校正結果同步給家人 */
+const HOMES=[
+  {key:'home:nikko',name:'JRタワーホテル 日航札幌',short:'日航札幌（家）',area:'札幌站周邊',pos:[43.06810,141.35240]}
+];
+function homeItems(){
+  return HOMES.map(h=>{const u=placePosStore[h.key];const ok=u&&isFinite(u.lat)&&isFinite(u.lng);
+    return {key:h.key,name:h.name,short:h.short,kind:'home',home:true,area:h.area,nav:h.name,hours:'',pos:ok?{lat:u.lat,lng:u.lng}:{lat:h.pos[0],lng:h.pos[1]},approx:!ok};});
+}
+var mapUI={map:null,show:'all',sel:null,pick:null,view:null,unlocked:null,big:false,area:'',layer:null,fitNext:true};
+
+function loadLeaflet(){
+  if(window.L&&window.L.map)return Promise.resolve(window.L);
+  if(window._leafletP)return window._leafletP;
+  window._leafletP=new Promise((res,rej)=>{
+    if(!document.getElementById('leafletCss')){const l=document.createElement('link');l.id='leafletCss';l.rel='stylesheet';l.href='leaflet.css?v=hk29';document.head.appendChild(l);}
+    const sc=document.createElement('script');sc.src='leaflet.js?v=hk29';sc.onload=()=>res(window.L);sc.onerror=()=>{window._leafletP=null;rej(new Error('leaflet'));};document.head.appendChild(sc);
+  });
+  return window._leafletP;
+}
+/* ---- 座標解析：貼「35.01,135.76」或 Google 地圖網址（@緯度,經度／!3d..!4d..／q=／ll=）都可以 ---- */
+function parseLatLng(text){
+  const t=decodeURIComponent(String(text||'')).trim();if(!t)return null;
+  const ok=(a,b)=>{a=Number(a);b=Number(b);return isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180?{lat:a,lng:b}:null;};
+  let m=t.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);if(m)return ok(m[1],m[2]);
+  m=t.match(/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/);if(m)return ok(m[1],m[2]);
+  m=t.match(/[?&](?:q|ll|query|destination)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/);if(m)return ok(m[1],m[2]);
+  m=t.match(/^\s*(-?\d{1,2}\.\d+)\s*[,，\s]\s*(-?\d{1,3}\.\d+)\s*$/);if(m)return ok(m[1],m[2]);
+  return null;
+}
+function distM(a,b){
+  const R=6371000,rad=x=>x*Math.PI/180,dLat=rad(b.lat-a.lat),dLng=rad(b.lng-a.lng);
+  const h=Math.sin(dLat/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));
+}
+function fmtDist(m){return m<1000?`${Math.round(m/10)*10} 公尺`:`${(m/1000).toFixed(1)} 公里`;}
+function walkMin(m){return Math.max(1,Math.round(m*1.3/80));}   /* 直線距離 ×1.3 ≈ 實際步行路徑，80 公尺／分 */
+
+function placePos(key,name){
+  const u=placePosStore[key];
+  if(u&&isFinite(u.lat)&&isFinite(u.lng))return {pos:u,approx:false};
+  const sd=PLACE_SEED[name];
+  if(sd)return {pos:{lat:sd[0],lng:sd[1]},approx:true};
+  return {pos:null,approx:false};
+}
+function placeItems(kind){
+  const base=collectEatShop(kind).filter(o=>isSapporoArea(o.area)).map(o=>({key:o.key,name:o.name,kind,area:o.area,hours:o.hours,desc:o.desc,nav:o.nav,custom:false}));
+  const cus=eatShopStore.filter(c=>c.kind===kind&&isSapporoArea(c.area)).map(c=>({...esCardData(c),kind,area:c.area||'',hours:currentFieldValue('es:'+c.id,'hours',null)||'',custom:true,editId:c.id}));
+  return [...base,...cus].map(o=>{const p=placePos(o.key,o.name);return {...o,pos:p.pos,approx:p.approx};});
+}
+function placeAll(){return [...placeItems('eat'),...placeItems('shop')];}
+function placeByKey(key){return placeAll().find(o=>o.key===key)||homeItems().find(o=>o.key===key)||null;}
+function setPlacePos(key,lat,lng){placePosStore[key]={lat:Math.round(lat*1e6)/1e6,lng:Math.round(lng*1e6)/1e6};persistPlacePos();}
+function clearPlacePos(key){delete placePosStore[key];persistPlacePos();}
+
+function destroyPlaceMap(){
+  if(mapUI.map){try{const c=mapUI.map.getCenter();mapUI.view={lat:c.lat,lng:c.lng,z:mapUI.map.getZoom()};mapUI.map.remove();}catch(e){}}
+  mapUI.map=null;mapUI.layer=null;
+}
+function kindsShown(){return mapUI.show==='eat'?['eat']:mapUI.show==='shop'?['shop']:['eat','shop'];}
+function placeMapHTML(){
+  const areas=['全部',...allEatAreas().filter(isSapporoArea)];
+  if(mapUI.unlocked==null)mapUI.unlocked=true; /* v82：手機也預設可以直接用手指拖曳、兩指縮放 */
+  const shows=[['all','美食＋逛街'],['eat','只看美食'],['shop','只看逛街']];
+  return `<section class="pm-card"><div class="pm-head"><b>札幌吃逛地圖</b><small>點圖釘看距離與能不能走地下；「家」是日航札幌</small></div>
+  <div class="pm-seg" role="tablist">${shows.map(([k,l])=>`<button type="button" data-show="${k}" class="${mapUI.show===k?'on':''}" onclick="placeMapShow('${k}')">${l}</button>`).join('')}</div>
+  <div class="pm-areas">${areas.map(a=>`<button type="button" data-area="${escAttr(a)}" class="${(mapUI.area||'全部')===a?'on':''}" onclick="placeMapArea('${jsQuote(a)}')">${escHtml(a)}</button>`).join('')}</div>
+  <div class="pm-wrap${mapUI.big?' big':''}"><div id="placeMap"></div><button type="button" class="pm-reset" onclick="placeMapReset()">↺ 回到初始畫面</button><button type="button" class="pm-locked" id="pmLocked" onclick="placeMapAct('lock')"${mapUI.unlocked?' hidden':''}>🔒 地圖已鎖定<br><small>點這裡就可以移動地圖</small></button><div class="pm-peek" id="pmPeek" hidden></div><div class="pm-pickbar" id="placePickBar" hidden></div><div class="pm-loading" id="placeMapLoading">地圖載入中…</div></div>
+  <div class="pm-opts"><button type="button" data-act="lock" class="${mapUI.unlocked?'on':''}" onclick="placeMapAct('lock')">${lockLabel()}</button><button type="button" data-act="ugonly" class="${mapUI.ugOnly?'on':''}" onclick="placeMapUgOnly()">${mapUI.ugOnly?'❄ 顯示全部':'❄ 只看不用走雪地'}</button><button type="button" data-act="big" onclick="placeMapAct('big')">${mapUI.big?'縮小地圖':'放大地圖'}</button><button type="button" class="edit-only" onclick="placeMapAct('new')">＋ 在地圖上新增地點</button></div>
+  <div class="pm-legend"><span><i class="lg eat"></i>美食</span><span><i class="lg shop"></i>逛街</span><span><i class="lg home"></i>家（住的飯店）</span><span><i class="lg approx"></i>約略位置</span><span><i class="lg ug"></i>地下街</span><span><i class="lg roof"></i>有屋頂商店街</span></div>
+  <div id="placeInfo" class="pm-info"></div><div id="placeUnpinned" class="pm-unpinned edit-only"></div></section>`;
+}
+function lockLabel(){return mapUI.unlocked?'🔒 鎖定地圖（只想捲動頁面時）':'🔓 解除鎖定，可以移動地圖';}
+function pinIcon(o,sel){
+  const img=o.kind==='shop'?NAV_IC.shopping:NAV_IC.food;
+  return L.divIcon({className:'pm-pin-wrap',iconSize:[40,40],iconAnchor:[20,20],html:`<div class="pin pin-${o.kind}${o.approx?' approx':''}${sel?' sel':''}"><img src="${img}" alt=""><i class="ug-dot ${ugOf(o).level}"></i></div>`});
+}
+function homeIcon(h,sel){
+  return L.divIcon({className:'pm-pin-wrap',iconSize:[44,44],iconAnchor:[22,22],html:`<div class="pin pin-home${sel?' sel':''}"><span>家</span></div>`});
+}
+async function initPlaceMap(){
+  let L_;try{L_=await loadLeaflet();}catch(e){const el=document.getElementById('placeMapLoading');if(el)el.textContent='地圖元件載入失敗，請重新整理再試。';return;}
+  const host=document.getElementById('placeMap');if(!host)return;
+  if(mapUI.map){try{mapUI.map.remove();}catch(e){}mapUI.map=null;}
+  const map=L.map(host,{zoomControl:true,attributionControl:true,dragging:!!mapUI.unlocked,touchZoom:!!mapUI.unlocked,scrollWheelZoom:false,doubleClickZoom:!!mapUI.unlocked,boxZoom:false,tap:true,zoomSnap:0.5});
+  mapUI.map=map;
+  try{L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,crossOrigin:true,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);}catch(e){}
+  mapUI.layer=L.layerGroup().addTo(map);
+  const fit=mapUI.fitNext||!mapUI.view;mapUI.fitNext=false;
+  if(!fit)map.setView([mapUI.view.lat,mapUI.view.lng],mapUI.view.z);
+  drawPlaceMap(fit);
+  if(mapUI.focusSel&&mapUI.sel){mapUI.focusSel=false;const o=placeByKey(mapUI.sel);if(o&&o.pos)map.setView([o.pos.lat,o.pos.lng],16);}
+  map.on('click',e=>{
+    if(!mapUI.pick){if(mapUI.sel){placeMapDeselect();}return;}
+    const p=mapUI.pick;mapUI.pick=null;
+    if(p.type==='set'){setPlacePos(p.key,e.latlng.lat,e.latlng.lng);mapUI.sel=p.key;toast_('已標好位置');placeMapRefresh();}
+    else if(p.type==='new'){addEatShopAt(p.kind||null,e.latlng.lat,e.latlng.lng);}
+    updatePickBar();
+  });
+  const ld=document.getElementById('placeMapLoading');if(ld)ld.hidden=true;
+  setTimeout(()=>{try{map.invalidateSize();}catch(e){}},120);
+  updatePickBar();renderPlaceInfo();renderUnpinned();renderPlacePeek();
+}
+function toast_(msg){try{showToast(msg);}catch(e){}}
+function drawPlaceMap(fit){
+  const map=mapUI.map;if(!map||!window.L||!mapUI.layer)return;
+  mapUI.layer.clearLayers();
+  drawUnderground(mapUI.layer);
+  const edit=document.body.classList.contains('mode-edit');
+  const pts=[],allPts=[];
+  const inArea=o=>!mapUI.area||o.area===mapUI.area;
+  homeItems().forEach(h=>{
+    const sel=mapUI.sel===h.key;
+    const mk=L.marker([h.pos.lat,h.pos.lng],{icon:homeIcon(h,sel),draggable:edit,zIndexOffset:sel?1100:600,keyboard:false}).addTo(mapUI.layer);
+    mk.bindTooltip(mapUI.sel?h.name:h.short,{direction:'bottom',offset:[0,18],className:'pm-tip pm-tip-home',permanent:!mapUI.sel});
+    mk.on('click',()=>selectPlace(h.key,true));
+    mk.on('dragend',()=>{const ll=mk.getLatLng();setPlacePos(h.key,ll.lat,ll.lng);mapUI.sel=h.key;placeMapRefresh();});
+    allPts.push([h.pos.lat,h.pos.lng]);
+    if(mapUI.area&&inArea(h))pts.push([h.pos.lat,h.pos.lng]);
+  });
+  kindsShown().flatMap(k=>placeItems(k)).forEach(o=>{
+    if(!o.pos)return;
+    if(mapUI.ugOnly&&['surface','unknown'].includes(ugOf(o).level))return;
+    const sel=mapUI.sel===o.key;
+    const mk=L.marker([o.pos.lat,o.pos.lng],{icon:pinIcon(o,sel),draggable:edit,zIndexOffset:sel?1000:200,riseOnHover:true}).addTo(mapUI.layer);
+    mk.on('click',()=>selectPlace(o.key,true));
+    mk.on('dragend',()=>{const ll=mk.getLatLng();setPlacePos(o.key,ll.lat,ll.lng);placeMapRefresh();});
+    mk.bindTooltip(o.name,{direction:'top',offset:[0,-16],className:'pm-tip'});
+    allPts.push([o.pos.lat,o.pos.lng]);
+    if(mapUI.area&&inArea(o))pts.push([o.pos.lat,o.pos.lng]);
+  });
+  const sel=mapUI.sel?placeByKey(mapUI.sel):null;
+  if(sel&&sel.pos){
+    nearbyFor(sel).lines.forEach(n=>{
+      L.polyline([[sel.pos.lat,sel.pos.lng],[n.o.pos.lat,n.o.pos.lng]],{color:n.o.kind==='shop'?'#D8602F':n.o.kind==='home'?'#27478C':'#2f8a52',weight:3,dashArray:'6 6',opacity:.85}).addTo(mapUI.layer);
+    });
+  }
+  if(fit){
+    const use=mapUI.area?pts:allPts;
+    if(mapUI.area&&!use.length&&AREA_POINTS[mapUI.area])map.setView(AREA_POINTS[mapUI.area],16);
+    else if(use.length>1)map.fitBounds(use,{padding:[34,34],maxZoom:17});
+    else if(use.length===1)map.setView(use[0],16);
+    else map.setView(AREA_POINTS['札幌站周邊'],15);
+  }
+}
+/* 離選取點最近的地點；選「家」時列出飯店附近的美食與逛街 */
+function nearbyFor(o){
+  const dist=x=>x.pos&&o.pos?{o:x,m:distM(o.pos,x.pos)}:null;
+  const near=list=>list.filter(x=>x.key!==o.key).map(dist).filter(Boolean).sort((a,b)=>a.m-b.m);
+  const homes=o.home?[]:near(homeItems());
+  if(o.home){
+    const groups=kindsShown().map(k=>({title:k==='eat'?'飯店附近的美食':'飯店附近的逛街',list:near(placeItems(k)).slice(0,5)}));
+    const lines=groups.flatMap(g=>g.list.slice(0,2)).sort((a,b)=>a.m-b.m).slice(0,4);
+    return {groups,homes,lines};
+  }
+  const opp=o.kind==='eat'?'shop':'eat';
+  const opps=near(placeItems(opp)),oppNear=opps.filter(x=>x.m<=1500).slice(0,5),oppList=oppNear.length?oppNear:opps.slice(0,3);
+  const groups=[{title:o.kind==='eat'?'吃完可以逛（離這裡最近）':'逛完可以吃（離這裡最近）',list:oppList,empty:`還沒有其他${o.kind==='eat'?'逛街':'美食'}點標上位置。`},{title:`附近也有${o.kind==='eat'?'美食':'逛街'}`,list:near(placeItems(o.kind)).slice(0,3)}];
+  return {groups,homes,lines:oppList.slice(0,3)};
+}
+function selectPlace(key,fromMap){
+  mapUI.sel=key;
+  const o=placeByKey(key);
+  drawPlaceMap(false);renderPlaceInfo();renderPlacePeek();
+  if(o&&o.pos&&mapUI.map){try{
+    /* 把選到的點移到「小卡上方的可見區」中間，不被小卡蓋住 */
+    const map=mapUI.map,host=document.getElementById('placeMap'),card=document.getElementById('pmPeek');
+    let shift=0;
+    if(host&&card&&!card.hidden){const hr=host.getBoundingClientRect(),cr=card.getBoundingClientRect();const scale=host.clientHeight/(hr.height||1);shift=Math.max(0,(hr.bottom-cr.top))*scale/2;}
+    const pt=map.project([o.pos.lat,o.pos.lng],map.getZoom()).add([0,shift]);
+    map.panTo(map.unproject(pt,map.getZoom()),{animate:true});
+  }catch(e){}}
+  if(!fromMap){const w=document.querySelector('.pm-card');if(w)w.scrollIntoView({behavior:'smooth',block:'start'});}
+}
+/* 不想看這個點了：回到一開始的全覽畫面 */
+function placeMapReset(){
+  mapUI.sel=null;mapUI.area='';mapUI.pick=null;
+  placeMapSyncControls();updatePickBar();drawPlaceMap(true);renderPlaceInfo();renderPlacePeek();
+}
+function placeMapDeselect(){mapUI.sel=null;drawPlaceMap(false);renderPlaceInfo();renderPlacePeek();}
+/* v82：點圖釘後，直接在地圖下緣跳出小卡（名稱、最近兩個點與步行時間、導航），不用往下捲才看得到 */
+function renderPlacePeek(){
+  const box=document.getElementById('pmPeek');if(!box)return;
+  const o=mapUI.sel?placeByKey(mapUI.sel):null;
+  if(!o){box.hidden=true;box.innerHTML='';return;}
+  const nb=o.pos?nearbyFor(o):null;
+  const near=nb?nb.groups.flatMap(g=>g.list).sort((a,b)=>a.m-b.m).slice(0,2):[];
+  const q=jsQuote(o.key);
+  box.innerHTML=`<div class="pk-top"><b>${o.home?'<i class="pm-home-tag">家</i>':''}${escHtml(o.name)}</b><button type="button" class="pk-x" onclick="placeMapDeselect()" aria-label="關閉">✕</button></div>
+    ${o.home?'':`<div class="pk-ug ${ugOf(o).level}">${escHtml(ugOf(o).short)}</div>`}
+    ${near.length?`<div class="pk-near">${near.map(n=>`<button type="button" onclick="selectPlace('${jsQuote(n.o.key)}',true)"><span>${escHtml(n.o.name)}</span><em>步行 ${walkMin(n.m)} 分</em></button>`).join('')}</div>`:''}
+    <div class="pk-btns"><a href="${escAttr(mapsLink(o.nav))}" target="_blank" rel="noopener">導航</a>${o.home?'':`<button type="button" onclick="openSpotDetail('${q}')">詳情</button>`}<button type="button" onclick="document.getElementById('placeInfo')?.scrollIntoView({behavior:'smooth',block:'start'})">更多距離 ↓</button></div>`;
+  box.hidden=false;
+}
+function placeMapSyncControls(){
+  document.querySelectorAll('.pm-areas button').forEach(b=>b.classList.toggle('on',b.dataset.area===(mapUI.area||'全部')));
+  document.querySelectorAll('.pm-seg button').forEach(b=>b.classList.toggle('on',b.dataset.show===mapUI.show));
+  const lk=document.querySelector('.pm-opts [data-act="lock"]');if(lk){lk.classList.toggle('on',!!mapUI.unlocked);lk.textContent=lockLabel();}
+  const uo=document.querySelector('.pm-opts [data-act="ugonly"]');if(uo){uo.classList.toggle('on',!!mapUI.ugOnly);uo.textContent=mapUI.ugOnly?'❄ 顯示全部':'❄ 只看不用走雪地';}
+  const bg=document.querySelector('.pm-opts [data-act="big"]');if(bg)bg.textContent=mapUI.big?'縮小地圖':'放大地圖';
+  document.querySelector('.pm-wrap')?.classList.toggle('big',!!mapUI.big);
+}
+function renderPlaceInfo(){
+  const box=document.getElementById('placeInfo');if(!box)return;
+  const o=mapUI.sel?placeByKey(mapUI.sel):null;
+  if(!o){box.innerHTML=`<p class="pm-hint">點地圖上的圖釘，會列出離它最近的地點、直線距離與步行時間。也可以先從飯店看附近：</p><div class="pm-homebtns">${homeItems().map(h=>`<button type="button" onclick="selectPlace('${jsQuote(h.key)}')"><i>家</i>${escHtml(h.name)}</button>`).join('')}</div>`;return;}
+  const q=jsQuote(o.key);
+  const nb=o.pos?nearbyFor(o):null;
+  const row=n=>`<button type="button" class="pm-row ${n.o.kind}" onclick="selectPlace('${jsQuote(n.o.key)}',true)"><span class="rn">${escHtml(n.o.name)}${n.o.approx&&!n.o.home?'<em>約略</em>':''}</span><span class="rd">${fmtDist(n.m)}・步行約 ${walkMin(n.m)} 分</span></button>`;
+  const homeLine=nb&&nb.homes.length?`<div class="pm-sel-homes">${nb.homes.map(n=>`<span><i>家</i>${escHtml(n.o.short||n.o.name)}：${fmtDist(n.m)}・步行約 ${walkMin(n.m)} 分</span>`).join('')}</div>`:'';
+  const posBtns=`<button type="button" class="edit-only" onclick="placePickFor('${q}')">${o.pos&&!o.approx?'重新點選位置':'在地圖上標位置'}</button><button type="button" class="edit-only" onclick="placeEditPos('${q}')">輸入座標</button>${placePosStore[o.key]?`<button type="button" class="edit-only del" onclick="placeClearPos('${q}')">${o.home?'還原預設位置':'清除位置'}</button>`:''}`;
+  box.innerHTML=`<div class="pm-sel"><div class="pm-sel-top"><b>${o.home?'<i class="pm-home-tag">家</i>':''}${escHtml(o.name)}</b><button type="button" class="pm-close" onclick="placeMapReset()" aria-label="關閉，回到初始畫面">✕ 關閉</button></div>
+    <div class="pm-sel-sub">${escHtml(o.area||'未分區')}</div>
+    ${o.hours?`<div class="pm-sel-line"><b>營業</b>${escHtml(o.hours)}</div>`:''}
+    ${o.approx?`<div class="pm-sel-line warn">這是約略位置；編輯模式可拖曳圖釘校正${o.home?'（校正後家人也會看到）':''}。</div>`:''}
+    ${!o.pos?'<div class="pm-sel-line warn">還沒有位置。</div>':''}
+    ${o.home?'':ugLineHTML(o)}
+    ${homeLine}
+    <div class="pm-sel-btns"><a href="${escAttr(mapsLink(o.nav))}" target="_blank" rel="noopener">導航</a>${o.home?'':`<button type="button" onclick="openSpotDetail('${q}')">詳情</button>`}${posBtns}</div>
+    ${nb?nb.groups.map(g=>g.list.length?`<h5>${escHtml(g.title)}</h5>${g.list.map(row).join('')}`:(g.empty?`<h5>${escHtml(g.title)}</h5><p class="pm-hint">${escHtml(g.empty)}</p>`:'')).join(''):''}</div>`;
+}
+function renderUnpinned(){
+  const box=document.getElementById('placeUnpinned');if(!box)return;
+  const miss=kindsShown().flatMap(k=>placeItems(k)).filter(o=>!o.pos);
+  box.innerHTML=miss.length?`<h5>還沒標位置（${miss.length}）</h5><div class="pm-miss">${miss.map(o=>`<button type="button" onclick="placePickFor('${jsQuote(o.key)}')">${escHtml(o.name)}<small>標位置</small></button>`).join('')}</div>`:'';
+}
+function placeMapRefresh(){drawPlaceMap(false);renderPlaceInfo();renderUnpinned();renderPlacePeek();}
+function updatePickBar(){
+  const bar=document.getElementById('placePickBar');if(!bar)return;
+  const wrap=bar.parentElement;
+  if(mapUI.pick){
+    const label=mapUI.pick.type==='new'?'點一下地圖，選擇新地點的位置':`點一下地圖，標出「${mapUI.pick.name||''}」的位置`;
+    bar.hidden=false;bar.innerHTML=`<span>${escHtml(label)}</span><button type="button" onclick="placePickCancel()">取消</button>`;wrap.classList.add('picking');
+    if(!mapUI.unlocked&&mapUI.map){/* 選位置時一律允許拖曳，才找得到地方 */try{mapUI.map.dragging.enable();mapUI.map.touchZoom.enable();}catch(e){}}
+  }else{bar.hidden=true;wrap.classList.remove('picking');if(!mapUI.unlocked&&mapUI.map){try{mapUI.map.dragging.disable();mapUI.map.touchZoom.disable();}catch(e){}}}
+}
+function placePickFor(key){const o=placeByKey(key);mapUI.pick={type:'set',key,name:o?o.name:''};updatePickBar();const w=document.querySelector('.pm-card');if(w)w.scrollIntoView({behavior:'smooth',block:'start'});}
+function placePickCancel(){mapUI.pick=null;updatePickBar();}
+function placeClearPos(key){clearPlacePos(key);placeMapRefresh();}
+function placeEditPos(key){
+  const o=placeByKey(key);if(!o)return;
+  const cur=placePosStore[key];
+  openFormModal({title:'輸入位置：'+o.name,fields:[{id:'ll',label:'貼上經緯度（例 43.0607,141.3546）或 Google 地圖「完整網址」（網址裡要有座標；短網址 maps.app.goo.gl 看不出座標，請改用地圖上點選）',type:'textarea',rows:3,value:cur?`${cur.lat},${cur.lng}`:''}],saveText:'儲存',
+    onSave:v=>{const p=parseLatLng(v.ll);if(!p){alert('看不出座標。請貼「緯度,經度」，或含座標的 Google 地圖完整網址。');return false;}setPlacePos(key,p.lat,p.lng);mapUI.sel=key;renderDayContent();}});
+}
+function placeMapArea(a){mapUI.area=a==='全部'?'':a;placeMapSyncControls();drawPlaceMap(true);}
+function placeMapShow(k){mapUI.show=k;const o=mapUI.sel?placeByKey(mapUI.sel):null;if(o&&!o.home&&!kindsShown().includes(o.kind))mapUI.sel=null;placeMapSyncControls();drawPlaceMap(true);renderPlaceInfo();renderUnpinned();renderPlacePeek();}
+function placeMapAct(act){
+  const map=mapUI.map;
+  if(act==='lock'){
+    mapUI.unlocked=!mapUI.unlocked;
+    if(map)['dragging','touchZoom','doubleClickZoom'].forEach(h=>{try{mapUI.unlocked?map[h].enable():map[h].disable();}catch(e){}});
+    placeMapSyncControls();const ov=document.getElementById('pmLocked');if(ov)ov.hidden=!!mapUI.unlocked;
+  }else if(act==='big'){
+    mapUI.big=!mapUI.big;placeMapSyncControls();
+    setTimeout(()=>{try{map&&map.invalidateSize();}catch(e){}},260);
+  }else if(act==='new'){mapUI.pick={type:'new',kind:mapUI.show==='all'?null:mapUI.show};updatePickBar();}
+}
+/* 新增地點時順便標位置 */
+function addEatShopAt(kind,lat,lng){
+  const c={id:newItemId('es'),kind:kind||'eat',name:'',area:'',note:'',mapQuery:''};
+  const fields=eatShopFields(c,stayGroups());
+  if(!kind)fields.unshift({id:'kind',label:'類型',type:'select',value:'eat',options:[{value:'eat',label:'美食（吃·北海道）'},{value:'shop',label:'逛街（逛·北海道）'}]});
+  openFormModal({title:'＋ 新增地點',fields,saveText:'新增',
+    onSave:v=>{if(!v.name){alert('請輸入名稱');return false;}Object.assign(c,{kind:v.kind||c.kind,name:v.name,area:v.area,note:v.note,mapQuery:v.mapQuery});delete c.pos;eatShopStore.push(c);persistEatShop();setPlacePos('es:'+c.id,lat,lng);mapUI.sel='es:'+c.id;renderDayContent();}});
+}
+
+/* ---------- 地下街／屋頂商店街：下雪天不用走雪地 ----------
+   線條是依地圖估的約略位置（不是官方圖資），只用來判斷「離地下街出口多遠」；
+   實際出口以現場指標為準。哪個點判斷錯了，編輯模式可以手動改。 */
+const UG_LINES=[
+  {name:'札幌站地下街（アピア・パセオ）',pts:[[43.06778,141.34820],[43.06762,141.35420]]},
+  {name:'チ・カ・ホ（札幌站前通地下步行空間）',pts:[[43.06740,141.35215],[43.06380,141.35300],[43.06070,141.35455]]},
+  {name:'ポールタウン（大通～薄野）',pts:[[43.06040,141.35460],[43.05800,141.35400],[43.05560,141.35330]]},
+  {name:'オーロラタウン（大通～テレビ塔）',pts:[[43.06070,141.35460],[43.06110,141.35800]]}
+];
+const ROOF_LINES=[{name:'狸小路商店街（有屋頂）',pts:[[43.05745,141.34820],[43.05760,141.35640]]}];
+var placeUgStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_place_ug'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
+function persistPlaceUg(){safeSetItem('hokkaido_place_ug',placeUgStore);}
+/* 點到折線的最近距離（公尺）與最近的那條線 */
+function distToLines(p,lines){
+  let best={m:Infinity,name:''};
+  const kx=111320*Math.cos(p.lat*Math.PI/180),ky=110540;
+  lines.forEach(l=>{for(let i=0;i<l.pts.length-1;i++){
+    const ax=(l.pts[i][1]-p.lng)*kx,ay=(l.pts[i][0]-p.lat)*ky,bx=(l.pts[i+1][1]-p.lng)*kx,by=(l.pts[i+1][0]-p.lat)*ky;
+    const dx=bx-ax,dy=by-ay,len=dx*dx+dy*dy;let t=len?-(ax*dx+ay*dy)/len:0;t=Math.max(0,Math.min(1,t));
+    const m=Math.hypot(ax+t*dx,ay+t*dy);if(m<best.m)best={m,name:l.name};
+  }});
+  return best;
+}
+const UG_TEXT={
+  direct:{short:'🟢 地下直通，不用走雪地',tip:'地下直通'},
+  mostly:{short:'🟡 大部分走地下',tip:'大部分地下'},
+  roof:{short:'☂️ 狸小路有屋頂，少走雪地',tip:'有屋頂'},
+  surface:{short:'🔴 要走雪地',tip:'要走雪地'},
+  unknown:{short:'⚪ 還沒標位置，無法判斷',tip:''}
+};
+function ugOf(o){
+  if(!o||o.home)return {level:'home',short:'',long:''};
+  const ov=placeUgStore[o.key];
+  if(!o.pos&&!(ov&&ov.level))return {level:'unknown',short:UG_TEXT.unknown.short,long:'標好位置後會自動判斷能不能走地下。'};
+  let level,long='';
+  const ug=o.pos?distToLines(o.pos,UG_LINES):{m:Infinity,name:''},rf=o.pos?distToLines(o.pos,ROOF_LINES):{m:Infinity};
+  const out=Math.max(0,ug.m-40);  /* 出口到地面後實際要走的距離（扣掉建築物本身約 40 公尺） */
+  if(ug.m<=80){level='direct';long=`在${ug.name}旁邊。從日航札幌可以一路走地下（札幌站地下街 → チ・カ・ホ／ポールタウン／オーロラタウン），出口出來就到。`;}
+  else if(ug.m<=280){level='mostly';long=`從日航札幌走地下到${ug.name}最近的出口，再走地上約 ${walkMin(out)} 分（約 ${fmtDist(out)}）。`;}
+  else if(rf.m<=70){level='roof';long=`走地下到大通／薄野出口後，進狸小路就在屋頂下走；露天的部分約 ${walkMin(Math.max(0,ug.m-40))} 分。`;}
+  else{level='surface';long=`離地下街出口約 ${fmtDist(ug.m)}，要走地上約 ${walkMin(ug.m)} 分。下大雪時建議搭計程車或地下鐵。`;}
+  if(ov&&ov.level&&UG_TEXT[ov.level]){level=ov.level;long=(ov.note?ov.note+'　':'')+'（家人手動設定）';}
+  let short=UG_TEXT[level].short;
+  if(level==='surface'&&isFinite(ug.m))short+=` 約 ${walkMin(ug.m)} 分`;
+  return {level,short,long};
+}
+function ugLineHTML(o){
+  const u=ugOf(o);if(!u.short)return '';
+  return `<div class="pm-ug ${u.level}"><b>${escHtml(u.short)}</b><span>${escHtml(u.long)}</span><button type="button" class="edit-only" onclick="editPlaceUg('${jsQuote(o.key)}')">修改地下判斷</button></div>`;
+}
+function editPlaceUg(key){
+  const o=placeByKey(key);if(!o)return;const cur=placeUgStore[key]||{};
+  openFormModal({title:'能不能走地下：'+o.name,fields:[
+    {id:'level',label:'判斷',type:'select',value:cur.level||'',options:[{value:'',label:'自動判斷（依位置）'},{value:'direct',label:'🟢 地下直通，不用走雪地'},{value:'mostly',label:'🟡 大部分走地下'},{value:'roof',label:'☂️ 有屋頂可走'},{value:'surface',label:'🔴 要走雪地'}]},
+    {id:'note',label:'說明（選填，例：從 4 號出口出來右轉 1 分鐘）',type:'textarea',rows:2,value:cur.note||''}],saveText:'儲存',
+    onSave:v=>{if(!v.level&&!v.note)delete placeUgStore[key];else placeUgStore[key]={level:v.level,note:v.note};persistPlaceUg();placeMapRefresh();}});
+}
+function drawUnderground(layer){
+  if(!window.L)return;
+  UG_LINES.forEach(l=>{L.polyline(l.pts,{color:'#ffffff',weight:11,opacity:.9,interactive:false}).addTo(layer);L.polyline(l.pts,{color:'#3F6CC4',weight:7,opacity:.85}).bindTooltip(l.name+'（地下）',{sticky:true,className:'pm-tip'}).addTo(layer);});
+  ROOF_LINES.forEach(l=>{L.polyline(l.pts,{color:'#D9A93B',weight:7,opacity:.85,dashArray:'2 8',lineCap:'round'}).bindTooltip(l.name,{sticky:true,className:'pm-tip'}).addTo(layer);});
+}
+/* 「只看不用走雪地」 */
+function placeMapUgOnly(){mapUI.ugOnly=!mapUI.ugOnly;placeMapSyncControls();placeMapRefresh();}
+
 
 /* ---- 初次渲染 ---- */
 renderDayChips();
