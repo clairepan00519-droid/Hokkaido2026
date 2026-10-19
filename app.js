@@ -3112,7 +3112,7 @@ const TENKI_LINKS={
 /* =====================================================================
    v48：收藏／預約狀態／提醒、自駕即時路況、版本與同步比對
    ===================================================================== */
-const APP_VERSION='hk31-2026-10-19';
+const APP_VERSION='hk32-2026-10-19';
 
 /* ---------- 收藏 ★／預約狀態／提醒 ---------- */
 let marksStore=(()=>{try{const v=JSON.parse(localStorage.getItem('hokkaido_marks'));return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch(e){return {};}})();
@@ -5101,6 +5101,7 @@ function placeMapHTML(){
   <div class="pm-wrap${mapUI.big?' big':''}"><div id="placeMap"></div><button type="button" class="pm-reset" onclick="placeMapReset()">↺ 回到初始畫面</button><button type="button" class="pm-locked" id="pmLocked" onclick="placeMapAct('lock')"${mapUI.unlocked?' hidden':''}>🔒 地圖已鎖定<br><small>點這裡就可以移動地圖</small></button><div class="pm-peek" id="pmPeek" hidden></div><div class="pm-pickbar" id="placePickBar" hidden></div><div class="pm-loading" id="placeMapLoading">地圖載入中…</div></div>
   <div class="pm-opts"><button type="button" data-act="lock" class="${mapUI.unlocked?'on':''}" onclick="placeMapAct('lock')">${lockLabel()}</button><button type="button" data-act="ugonly" class="${mapUI.ugOnly?'on':''}" onclick="placeMapUgOnly()">${mapUI.ugOnly?'❄ 顯示全部':'❄ 只看不用走雪地'}</button><button type="button" data-act="big" onclick="placeMapAct('big')">${mapUI.big?'縮小地圖':'放大地圖'}</button><button type="button" class="edit-only" onclick="placeMapAct('new')">＋ 在地圖上新增地點</button></div>
   <div class="pm-legend"><span><i class="lg eat"></i>美食</span><span><i class="lg shop"></i>逛街</span><span><i class="lg home"></i>家（住的飯店）</span><span><i class="lg approx"></i>約略位置</span><span><i class="lg ug"></i>地下街</span><span><i class="lg roof"></i>有屋頂商店街</span></div>
+  <a class="pm-extlink" href="https://uu-nippon.jp/gnomemap/sapporo_chika/index_zh.html#15/43.0618/141.3541" target="_blank" rel="noopener">🗺 札幌地下街詳細地圖 ↗<small>出口編號、連通的大樓都查得到</small></a>
   <div id="placeInfo" class="pm-info"></div><div id="placeUnpinned" class="pm-unpinned edit-only"></div></section>`;
 }
 function lockLabel(){return mapUI.unlocked?'🔒 鎖定地圖（只想捲動頁面時）':'🔓 解除鎖定，可以移動地圖';}
